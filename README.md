@@ -18,11 +18,7 @@ This repository contains the Group Project: Automated Fraud Detection System.
    git config user.email "your.email@example.com"
    ```
 
-3. **Create a virtual environment (for Python work):**
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
+
 
 ### Workflow
 
@@ -44,10 +40,7 @@ This repository contains the Group Project: Automated Fraud Detection System.
 
 4. **Create a Pull Request** on GitHub for review before merging to `main`.
 
-### Branch Naming Convention
-- Features: `feature/feature-name`
-- Bug fixes: `bugfix/bug-description`
-- Docs: `docs/description`
+
 
 ### Important
 - **Never push directly to `main`** — always use feature branches and PRs.
