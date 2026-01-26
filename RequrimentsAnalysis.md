@@ -41,8 +41,8 @@ These define how the system performs. This is critical for fraud detection (spee
 
 ---
 
-## 4. Innovative Features (For Novelty Score)
-To satisfy the 15% novelty grading criteria, the system includes the following unique capabilities:
+## 4. Innovative Features 
+ the system includes the following unique capabilities:
 
 * **Behavioral Biometrics:** The system shall analyze not just *what* was bought, but *how* the user interacted with the device (e.g., typing speed, mouse movement patterns) to verify identity.
 * **Explainable AI (XAI):** The system shall not just say "Fraud Detected"; it shall provide a human-readable explanation (e.g., "Flagged because location changed from NY to London in 30 minutes").
