@@ -46,9 +46,3 @@ This repository contains the Group Project: Automated Fraud Detection System.
 - **Never push directly to `main`** — always use feature branches and PRs.
 - Keep commits atomic and well-messaged.
 - Pull latest changes before starting new work: `git pull origin main`
-
-
-
-
-Contributor: Shashank
-
