@@ -1,5 +1,3 @@
-Below is a **clean, copy-paste ready Markdown (.md) file** version of the **Requirement Analysis**.
-You can directly paste this into a `.md` file (e.g., `requirement-analysis.md`).
 
 ---
 
