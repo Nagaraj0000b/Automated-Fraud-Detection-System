@@ -98,8 +98,7 @@ This ensures high speed (via rules) and high accuracy (via ML).
 ## 5. Innovation & Novelty 
 *To differentiate this project from standard implementations, the following innovative features are included:*
 
-### 5.1 Behavioral Biometrics Integration
-The system shall not strictly rely on transactional data. It shall ingest device telemetry (mouse movement patterns, typing cadence on mobile apps) to verify if the person initiating the transfer matches the biometrics of the account owner.
+
 
 ### 5.2 Explainable AI (XAI) "Why-was-I-blocked?"
 Standard ML models are "black boxes." This system shall include an interpretation layer (using SHAP values) that provides a human-readable reason for every block.
