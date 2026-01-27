@@ -1,126 +1,156 @@
-# Software Requirements Specification (SRS)
-## Project: Automated Fraud Detection and Alerting System
+Below is a **clean, copy-paste ready Markdown (.md) file** version of the **Requirement Analysis**.
+You can directly paste this into a `.md` file (e.g., `requirement-analysis.md`).
 
-**Version:** 1.0
-**Date:** 23-01-2026
+---
+
+# Requirement Analysis
+
+## Automated Fraud Detection System
 
 ---
 
 ## 1. Introduction
 
-### 1.1 Purpose
-The purpose of the Automated Fraud Detection and Alerting System is to provide financial institutions with a robust, real-time mechanism to identify and prevent fraudulent transactions. Unlike traditional batch-processing systems, this software aims to detect anomalies at the moment of the transaction, drastically reducing financial liability for both the bank and the customer.
-
-### 1.2 Problem Statement
-With the exponential rise in digital banking, financial fraud has evolved from simple card theft to complex synthetic identity fraud and account takeovers. Existing legacy systems often rely on static rules (e.g., "deny if amount > $5000"), which result in high "False Positive" rates—blocking legitimate customers—and fail to detect new, sophisticated fraud patterns. There is a critical need for a system that learns dynamic behavioral patterns to improve accuracy.
-
-### 1.3 Scope
-The product will be a server-side application that integrates with a bank's transaction gateway. It will:
-* Ingest transaction data in real-time.
-* Analyze data using both Rule-Based and Machine Learning engines.
-* Generate immediate alerts for suspicious activities.
-* Provide a dashboard for fraud analysts to investigate cases.
-
-The system will *not* handle the actual fund transfer but will act as a "Gatekeeper" that approves or flags the transfer request.
-
-### 1.4 Definitions and Acronyms
-* **FPR (False Positive Rate):** The percentage of legitimate transactions incorrectly flagged as fraud.
-* **PII:** Personally Identifiable Information.
-* **ML:** Machine Learning.
-* **XAI:** Explainable AI.
+The rapid expansion of online banking and digital payment systems has significantly increased the risk of financial fraud. Global online payment fraud losses exceeded **$44 billion in 2024**, highlighting the urgent need for effective fraud prevention mechanisms. Automated Fraud Detection Systems (AFDS) use advanced technologies such as Artificial Intelligence (AI), Machine Learning (ML), real-time data processing, and behavioral analytics to detect and prevent fraudulent activities efficiently and accurately.
 
 ---
 
-## 2. Overall Description
+## 2. Problem Statement
 
-### 2.1 Proposed System
-The proposed system utilizes a Hybrid approach. It combines:
-1.  **Deterministic Rules:** For obvious fraud (e.g., blacklisted IP addresses).
-2.  **Probabilistic ML Models:** For subtle fraud (e.g., unusual spending velocity).
-This ensures high speed (via rules) and high accuracy (via ML).
-
-### 2.2 User Characteristics
-* **End User (Bank Customer):** Non-technical. Needs reassurance that their money is safe and expects minimal disruption to legitimate spending.
-* **Fraud Analyst:** Technical domain expert. Needs detailed data to investigate why a transaction was flagged.
-* **System Administrator:** Technical expert. Responsible for system uptime, model retraining, and user management.
-
-### 2.3 Assumptions and Dependencies
-* The system assumes access to a stream of transaction data from the bank's core banking system.
-* The system relies on a stable internet connection for sending real-time alerts (SMS/Email).
-* Historical transaction data is available to train the initial ML models.
+Financial institutions handle millions of transactions daily, making manual fraud detection impractical, slow, and prone to human error. Fraudsters continuously evolve their techniques, including credit card fraud, phishing, and account takeovers. Traditional rule-based systems fail to adapt quickly to these changes. Therefore, an automated, intelligent, and scalable fraud detection system is required to monitor transactions in real time and mitigate financial risks effectively.
 
 ---
 
-## 3. Functional Requirements
-*This section defines the specific behaviors of the system using formal "The system shall..." statements.*
+## 3. Objectives of the System
 
-### 3.1 Module 1: Data Ingestion & Validation
-* **FR-1.1:** The system shall accept JSON-formatted transaction streams containing Transaction ID, Amount, Timestamp, Merchant ID, User ID, and Location.
-* **FR-1.2:** The system shall validate all incoming fields and reject malformed data packets with an error log.
-* **FR-1.3:** The system shall normalize currency values to a standard base currency (e.g., USD) before analysis.
+The main objectives of the Automated Fraud Detection System are:
 
-### 3.2 Module 2: The Detection Engine
-* **FR-2.1 (Rule-Based):** The system shall flag any transaction exceeding a configurable maximum threshold (e.g., $10,000) within a single instance.
-* **FR-2.2 (Velocity Check):** The system shall flag accounts that attempt more than 5 transactions within a 1-minute window.
-* **FR-2.3 (ML-Based):** The system shall utilize a Supervised Learning model (e.g., Random Forest or Isolation Forest) to generate a "Fraud Probability Score" between 0.0 and 1.0.
-* **FR-2.4:** The system shall mark any transaction with a Score > 0.8 as "High Risk."
-
-### 3.3 Module 3: Alerting and Action
-* **FR-3.1:** The system shall trigger an email and SMS alert to the registered user within 5 seconds of detecting a "High Risk" transaction.
-* **FR-3.2:** The system shall provide an API endpoint to "Freeze" the transaction status, preventing funds from moving until the alert is resolved.
-* **FR-3.3:** The system shall allow the user to reply to the alert (e.g., "Yes, this was me") to immediately unfreeze the transaction.
-
-### 3.4 Module 4: Analytics Dashboard
-* **FR-4.1:** The system shall display a real-time heatmap of global fraud attempts on the administrator dashboard.
-* **FR-4.2:** The system shall allow analysts to filter historical alerts by Date, Severity, and Merchant Category.
-* **FR-4.3:** The system shall generate a monthly "Fraud Trends Report" in PDF format.
+* Detect fraudulent activities in real time
+* Prevent unauthorized transactions and account misuse
+* Minimize false positives to enhance customer experience
+* Adapt to new fraud patterns using AI and ML
+* Ensure data privacy, security, and regulatory compliance
 
 ---
 
-## 4. Non-Functional Requirements
-*These requirements ensure the system meets performance standards critical for financial security.*
+## 4. Stakeholders
 
-### 4.1 Performance (Latency)
-* **NFR-1:** The system shall process an incoming transaction and return a "Safe/Suspicious" verdict within **200 milliseconds**.
-
-### 4.2 Scalability
-* **NFR-2:** The system architecture shall support horizontal scaling to handle spikes of up to **1,000 transactions per second** (TPS).
-
-### 4.3 Security
-* **NFR-3:** All PII (Personally Identifiable Information) stored in the database shall be encrypted using **AES-256**.
-* **NFR-4:** System access shall be protected by Multi-Factor Authentication (MFA) for all Administrator and Analyst accounts.
-
-### 4.4 Reliability
-* **NFR-5:** The system shall maintain **99.9% availability** (uptime) during banking hours.
+* **Financial Institutions** – Banks, fintech companies, and payment service providers
+* **Customers** – Account holders and card users
+* **Fraud Analysts** – Personnel handling manual fraud investigations
+* **System Administrators** – Responsible for system maintenance
+* **Regulatory Authorities** – Ensure legal and compliance standards
 
 ---
 
-## 5. Innovation & Novelty 
-*To differentiate this project from standard implementations, the following innovative features are included:*
+## 5. Functional Requirements
 
+### 5.1 Data Collection and Integration
 
-
-### 5.2 Explainable AI (XAI) "Why-was-I-blocked?"
-Standard ML models are "black boxes." This system shall include an interpretation layer (using SHAP values) that provides a human-readable reason for every block.
-* *Example Output:* "Blocked because transaction location (London) is physically impossible to reach from previous location (NYC) in 30 minutes."
-
-### 5.3 Feedback Loop Learning
-The system shall implement an automated retraining pipeline. When a user marks an alert as "False Alarm," the system shall automatically add this data point to the training set and schedule a model update for the next maintenance window.
+* The system shall collect financial transaction data such as amount, frequency, and location.
+* The system shall maintain user profiles and behavioral data.
+* The system shall integrate external fraud intelligence sources for enhanced detection.
 
 ---
 
-## 6. System Interface Requirements
+### 5.2 Anomaly Detection
 
-### 6.1 Hardware Interfaces
-* **Server:** Minimum 16GB RAM, 8-Core Processor (to handle ML inference).
-* **Storage:** SSD storage for high-speed log writing.
-
-### 6.2 Software Interfaces
-* **Operating System:** Linux (Ubuntu/CentOS).
-* **Language:** Python (for ML components) and Java/Node.js (for high-speed API handling).
-* **Database:** PostgreSQL (Transactional data) and Redis (Caching for velocity checks).
+* The system shall identify unusual spending patterns.
+* The system shall detect abnormal login locations and device usage.
+* The system shall flag deviations from normal user behavior in real time.
 
 ---
 
-## 7. Conclusion
-The Automated Fraud Detection and Alerting System is designed to be a secure, scalable, and intelligent solution for modern banking. By integrating Novel features like Explainable AI and Biometrics, it addresses the key weaknesses of current legacy systems—specifically the high rate of false positives—while ensuring a seamless experience for the end-user.
+### 5.3 Machine Learning and Artificial Intelligence
+
+* The system shall use historical data to train fraud detection models.
+* The system shall adapt to new fraud tactics through continuous learning.
+* The system shall reduce false positives using adaptive algorithms.
+
+---
+
+### 5.4 Risk Scoring and Decision Engine
+
+* The system shall assign a risk score to each transaction.
+* The system shall automatically block high-risk transactions.
+* The system shall escalate medium-risk transactions for manual review.
+* The system shall dynamically adjust risk thresholds based on new data.
+
+---
+
+### 5.5 Real-Time Alerts and Actions
+
+* The system shall send instant alerts to customers and financial institutions.
+* The system shall block suspicious transactions in real time.
+* The system shall temporarily freeze accounts in case of severe fraud risk.
+
+---
+
+### 5.6 Fraud Types Supported
+
+The system shall detect the following fraud types:
+
+* Credit card fraud
+* Phishing attacks
+* Account takeover fraud
+* Identity theft
+* Loan and wire fraud
+* Payment fraud
+* SIM swap fraud
+* Social engineering and money transfer scams
+
+---
+
+## 6. Non-Functional Requirements
+
+### 6.1 Performance
+
+* The system shall process transactions in real time with minimal latency.
+* The system shall support high scalability to handle large transaction volumes.
+
+---
+
+### 6.2 Security
+
+* The system shall encrypt data at rest and in transit.
+* The system shall implement role-based access control.
+* The system shall securely manage biometric and sensitive data.
+
+---
+
+### 6.3 Accuracy
+
+* The system shall maintain a high fraud detection rate.
+* The system shall minimize false positives to avoid customer inconvenience.
+
+---
+
+### 6.4 Compliance
+
+* The system shall comply with GDPR, CCPA, and EU AI Act regulations.
+* The system shall provide explainable AI decisions for audit purposes.
+
+---
+
+### 6.5 Reliability
+
+* The system shall ensure high availability and fault tolerance.
+* The system shall support backup and recovery mechanisms.
+
+---
+
+## 7. System Constraints
+
+* Integration with legacy banking systems
+* Dependence on data quality and availability
+* Regulatory restrictions on data usage
+* Continuous evolution of fraud techniques
+
+---
+
+## 8. Conclusion
+
+The Automated Fraud Detection System aims to provide a secure, scalable, and intelligent solution for detecting and preventing financial fraud. By leveraging AI, machine learning, behavioral analytics, and real-time monitoring, the system enhances fraud detection accuracy while maintaining customer trust and regulatory compliance.
+
+---
+
