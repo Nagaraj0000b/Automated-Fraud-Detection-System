@@ -94,7 +94,7 @@ git push --set-upstream origin your-branch-name
 
 ---
 
-## Create a Pull Request (PR)
+## Send a Pull Request (PR) so your code merges to `main`
 1. Push your branch to GitHub.
 2. Open the repository on GitHub.
 3. Click **Compare & pull request**.
@@ -102,7 +102,11 @@ git push --set-upstream origin your-branch-name
 5. Add title/description (what you changed + why).
 6. Click **Create pull request**.
 
-After review, the owner will merge it into `main`.
+**Then:** the owner reviews and merges your PR into `main`.
+
+If you have merge permission:
+1. Open the PR.
+2. Click **Merge pull request** (or **Squash and merge**).
 
 ---
 
