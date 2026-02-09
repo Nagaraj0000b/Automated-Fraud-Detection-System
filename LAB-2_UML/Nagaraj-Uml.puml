@@ -1,0 +1,128 @@
+@startuml Automated_Fraud_Detection_System
+
+' Title
+title Automated Fraud Detection & Alerting System
+
+' Actors - Left Side (Internal)
+actor "Bank Customer" as Customer
+actor "System Admin" as Admin
+actor "Fraud Analyst" as Analyst
+
+' Actors - Right Side (External Systems)
+actor "External Fraud DB\n<<external system>>" as ExternalDB
+actor "Notification Service\n<<external system>>" as NotificationSvc
+
+' System Boundary
+rectangle "Automated Fraud Detection System" {
+  
+  ' ========== TRANSACTION PROCESSING FLOW ==========
+  usecase "Monitor Transaction\n& Bengalure" as UC1
+  usecase "Validate, Sanitize\n& Normalize Data" as UC2
+  usecase "Generate Compliance\nAudit" as UC3
+  
+  ' ========== FRAUD DETECTION CORE ==========
+  usecase "Detect Fraud\n(Rules + ML + Velocity)" as UC4
+  usecase "Analyze Behavioral\nBiometrics" as UC5
+  usecase "Assign Risk Score" as UC6
+  usecase "Explain Decision\n(XAI)" as UC7
+  usecase "Calculate Risk Score" as UC8
+  
+  ' ========== ALERT & ACTION FLOW ==========
+  usecase "Trigger Alert\n& Notify" as UC9
+  usecase "Log for Manual\nReview" as UC10
+  usecase "Freeze Transaction\n/ Account (API)" as UC11
+  usecase "User Confirm\n/ Reply" as UC12
+  
+  ' ========== ANALYSIS & CONTINUOUS IMPROVEMENT ==========
+  usecase "Review & Label\nTransaction" as UC13
+  usecase "Retrain ML Model\n(Automated Pipeline)" as UC14
+  
+  ' ========== SYSTEM MANAGEMENT ==========
+  usecase "Manage Risk Rules\n& AI Models" as UC15
+  usecase "View Dashboard\n& Reports" as UC16
+}
+
+' ========== ACTOR ASSOCIATIONS WITH CARDINALITY ==========
+
+' Bank Customer associations
+Customer "1" -- "1..*" UC1 : performs
+
+' System Admin associations
+Admin "1" -- "1" UC15 : manages
+
+' Fraud Analyst associations
+Analyst "1" -- "1..*" UC13 : reviews
+Analyst "1" -- "1" UC16 : views
+
+' External System associations
+UC4 -- "0..*" ExternalDB : queries
+UC9 -- "1..*" NotificationSvc : sends via
+
+' ========== <<INCLUDE>> RELATIONSHIPS (Mandatory) ==========
+
+' Transaction Flow - includes
+UC1 .> UC2 : <<include>>
+UC2 .> UC4 : <<include>>
+
+' Fraud Detection - includes (all mandatory)
+UC4 .> UC5 : <<include>>
+UC4 .> UC6 : <<include>>
+UC4 .> UC7 : <<include>>
+
+' Review includes retraining
+UC13 .> UC14 : <<include>>
+
+' ========== <<EXTEND>> RELATIONSHIPS (Conditional) ==========
+
+' Alert triggers (conditional on high risk)
+UC9 .> UC6 : <<extend>>\n{High Risk}
+
+' Alert extensions (conditional actions)
+UC10 .> UC9 : <<extend>>
+UC11 .> UC9 : <<extend>>\n{Medium Risk}
+UC12 .> UC9 : <<extend>>
+
+' ========== NOTES FOR CLARIFICATION ==========
+
+note right of UC1
+  Entry point: Customer
+  initiates transaction
+end note
+
+note right of UC4
+  Core fraud detection using:
+  - Rule-based logic
+  - Machine Learning models
+  - Velocity checks
+end note
+
+note right of UC6
+  Risk Score: 0-100
+  Thresholds determine
+  alert/action levels
+end note
+
+note bottom of UC9
+  Triggered when risk score
+  exceeds configured threshold
+  Sends multi-channel alerts
+end note
+
+note right of UC14
+  Automated retraining pipeline
+  uses labeled feedback from
+  fraud analysts
+end note
+
+note left of ExternalDB
+  External fraud intelligence
+  database for pattern
+  matching and validation
+end note
+
+note left of NotificationSvc
+  Multi-channel notifications:
+  SMS, Email, Push
+end note
+
+@enduml
