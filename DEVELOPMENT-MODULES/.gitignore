@@ -8,10 +8,6 @@ server/node_modules/
 client/.env
 server/.env
 
-# Build outputs
-client/dist/
-client/build/
-server/dist/
 
 # Logs
 logs
@@ -37,8 +33,4 @@ coverage/
 .nyc_output/
 
 # Old files (backup)
-backend/
-index.html
-signup.html
-oauth-success.html
-SignIn.jsx
+
