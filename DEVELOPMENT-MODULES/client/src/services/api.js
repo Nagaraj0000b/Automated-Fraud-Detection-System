@@ -40,8 +40,9 @@ export const authAPI = {
     return response.data;
   },
 
-  googleAuth: () => {
-    window.location.href = `${API_URL.replace('/api', '')}/api/auth/google`;
+  googleAuth: (loginAs) => {
+    const base = `${API_URL.replace('/api', '')}/api/auth/google`;
+    window.location.href = loginAs ? `${base}?loginAs=${loginAs}` : base;
   },
 
   githubAuth: () => {

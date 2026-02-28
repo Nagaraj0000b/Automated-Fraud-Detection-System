@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import SignIn from './pages/SignIn';
 import SignUp from './pages/SignUp';
 import OAuthSuccess from './pages/OAuthSuccess';
+import UserDashboard from './pages/UserDashboard';
 import MainLayout from './components/layout/MainLayout';
 
 import DashboardOverview from './pages/dashboard/DashboardOverview';
@@ -23,9 +24,10 @@ function App() {
         <Route path="/signin" element={<SignIn />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/oauth-success" element={<OAuthSuccess />} />
+        <Route path="/user-dashboard" element={<UserDashboard />} />
 
         {/* Dashboard Routes wrapped in MainLayout */}
-        <Route path="/dashboard" element={<MainLayout />}>
+        <Route path="/admin-dashboard" element={<MainLayout />}>
           <Route index element={<DashboardOverview />} />
           <Route path="transactions" element={<TransactionMonitoring />} />
           <Route path="risk-rules" element={<RiskRules />} />
