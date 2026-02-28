@@ -36,9 +36,3 @@ Thumbs.db
 coverage/
 .nyc_output/
 
-# Old files (backup)
-backend/
-index.html
-signup.html
-oauth-success.html
-SignIn.jsx
