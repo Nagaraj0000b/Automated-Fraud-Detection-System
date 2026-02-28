@@ -26,7 +26,12 @@ router.get('/google', (req, res, next) => {
       message: 'Google OAuth is not configured on this server.'
     });
   }
-  return passport.authenticate('google', { scope: ['profile', 'email'] })(req, res, next);
+  // Capture the loginAs query param and pass it through OAuth state
+  const loginAs = req.query.loginAs || '';
+  return passport.authenticate('google', {
+    scope: ['profile', 'email'],
+    state: loginAs  // Pass through to callback
+  })(req, res, next);
 });
 
 router.get('/google/callback', (req, res, next) => {
@@ -36,6 +41,8 @@ router.get('/google/callback', (req, res, next) => {
       message: 'Google OAuth is not configured on this server.'
     });
   }
+  // Store loginAs from state before passport processes the request
+  req.loginAs = req.query.state || '';
   return passport.authenticate('google', { session: false, failureRedirect: '/oauth-failed' })
     (req, res, next);
 }, authController.oauthSuccess);

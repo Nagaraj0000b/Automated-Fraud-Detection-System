@@ -182,9 +182,10 @@ exports.getMe = async (req, res) => {
 // OAuth success handler
 exports.oauthSuccess = (req, res) => {
   const token = generateToken(req.user);
-  // Redirect to frontend OAuth success page with token
+  const loginAs = req.loginAs || '';
+  // Redirect to frontend OAuth success page with token and loginAs
   const clientURL = process.env.CLIENT_URL || 'http://localhost:3000';
-  res.redirect(`${clientURL}/oauth-success?token=${token}`);
+  res.redirect(`${clientURL}/oauth-success?token=${token}${loginAs ? `&loginAs=${loginAs}` : ''}`);
 };
 
 // OAuth failure handler

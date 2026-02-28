@@ -9,11 +9,11 @@ const OAuthSuccess = () => {
   useEffect(() => {
     // Extract token from URL
     const token = searchParams.get('token');
-    
+
     if (token) {
       // Store token in localStorage
       localStorage.setItem('authToken', token);
-      
+
       // Decode JWT to get user info (basic decoding, not verification)
       try {
         const base64Url = token.split('.')[1];
@@ -21,32 +21,40 @@ const OAuthSuccess = () => {
         const jsonPayload = decodeURIComponent(
           atob(base64)
             .split('')
-            .map(function(c) {
+            .map(function (c) {
               return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
             })
             .join('')
         );
-        
+
         const user = JSON.parse(jsonPayload);
         localStorage.setItem('user', JSON.stringify(user));
-        
+
         // Update message
         setMessage(`Welcome, ${user.name || user.email}! You're now signed in.`);
-        
+
         console.log('OAuth Success!', { token, user });
-        
-        // Auto-redirect after 2 seconds
-        setTimeout(() => {
-          navigate('/dashboard');
-        }, 2000);
-        
+
+        // Check if the user explicitly chose to log in as a different role
+        const loginAs = searchParams.get('loginAs');
+        console.log('OAuth loginAs param:', loginAs, '| DB role:', user.role);
+
+        // Role-based auto-redirect (respects the toggle from the SignIn page)
+        if (loginAs === 'user') {
+          // User explicitly chose the "User" tab, even if they're an admin
+          console.log('User chose USER tab -> routing to /user-dashboard');
+          navigate('/user-dashboard');
+        } else if (user.role === 'admin') {
+          navigate('/admin-dashboard');
+        } else {
+          navigate('/user-dashboard');
+        }
+
       } catch (error) {
         console.error('Error decoding token:', error);
         setMessage('Authentication successful! Token stored.');
-        
-        setTimeout(() => {
-          navigate('/dashboard');
-        }, 2000);
+
+        navigate('/user-dashboard');
       }
     } else {
       setMessage('No token received. Please try signing in again.');
@@ -63,8 +71,8 @@ const OAuthSuccess = () => {
         </div>
         <h1 className="text-3xl font-bold text-white mb-4">Sign-in Successful!</h1>
         <p className="text-white/70 mb-6">{message}</p>
-        <Link 
-          to="/dashboard" 
+        <Link
+          to="/dashboard"
           className="inline-block px-6 py-3 bg-gradient-to-r from-pink-500 to-purple-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300"
         >
           Go to Dashboard
