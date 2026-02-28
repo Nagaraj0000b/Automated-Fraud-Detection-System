@@ -8,10 +8,6 @@ server/node_modules/
 client/.env
 server/.env
 
-# Build outputs
-client/dist/
-client/build/
-server/dist/
 
 # Logs
 logs
@@ -35,4 +31,6 @@ Thumbs.db
 # Testing
 coverage/
 .nyc_output/
+
+# Old files (backup)
 
