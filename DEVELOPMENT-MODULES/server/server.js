@@ -10,6 +10,8 @@ const mongoose = require('mongoose');
 const connectDB = require('./config/database');
 const passport = require('./config/passport');
 const authRoutes = require('./routes/auth.routes');
+const userRoutes = require('./routes/user.routes');
+const dashboardRoutes = require('./routes/dashboard.routes');
 const authController = require('./controllers/auth.controller');
 
 const app = express();
@@ -34,6 +36,8 @@ connectDB();
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // OAuth failure route
 app.get('/oauth-failed', authController.oauthFailure);
@@ -43,7 +47,7 @@ app.get('/api/health', (req, res) => {
   const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
   const googleConfigured = process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_ID !== 'your-google-client-id-here';
   const githubConfigured = process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_ID !== 'your-github-client-id-here';
-  
+
   res.status(200).json({
     status: 'healthy',
     database: dbStatus,
@@ -61,10 +65,10 @@ app.listen(PORT, () => {
   console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔐 Sign-in endpoint: POST http://localhost:${PORT}/api/auth/signin`);
   console.log(`📝 Sign-up endpoint: POST http://localhost:${PORT}/api/auth/signup`);
-  
+
   const googleConfigured = process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_ID !== 'your-google-client-id-here';
   const githubConfigured = process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_ID !== 'your-github-client-id-here';
-  
+
   console.log(`🔑 Google OAuth: ${googleConfigured ? '✅ Configured' : '❌ Not configured'}`);
   console.log(`🔑 GitHub OAuth: ${githubConfigured ? '✅ Configured' : '❌ Not configured'}`);
 });
