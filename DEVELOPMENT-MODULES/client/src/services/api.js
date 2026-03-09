@@ -49,4 +49,26 @@ export const authAPI = {
   },
 };
 
+// Transaction API calls - For Customer Dashboard
+export const transactionAPI = {
+  // Fetch user transaction history
+  getMyTransactions: async () => {
+    const response = await api.get('/transactions/my-transactions');
+    return response.data;
+  },
+
+  // Create a new transaction (Send Money)
+  createTransaction: async (data) => {
+    // data = { amount, recipient, description, transactionType: 'transfer' }
+    const response = await api.post('/transactions/create', data);
+    return response.data;
+  },
+
+  // Raise a dispute for a specific transaction
+  raiseDispute: async (transactionId, reason) => {
+    const response = await api.post(`/transactions/${transactionId}/dispute`, { reason });
+    return response.data;
+  }
+};
+
 export default api;

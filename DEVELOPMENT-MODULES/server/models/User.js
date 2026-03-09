@@ -18,8 +18,12 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['user', 'admin'],
+    enum: ['user', 'admin', 'analyst'],
     default: 'user'
+  },
+  accountBalance: {
+    type: Number,
+    default: 10000.00 // Default Mock Balance
   },
   createdAt: {
     type: Date,

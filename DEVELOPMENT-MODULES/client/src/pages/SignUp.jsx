@@ -102,7 +102,12 @@ const SignUp = () => {
         console.log('Sign up successful!', data);
         alert(`Welcome, ${data.user.name}!\n\nYour account has been created successfully.`);
         
-        navigate('/dashboard');
+        // Redirect based on role
+        if (data.user.role === 'admin' || data.user.role === 'analyst') {
+          navigate('/dashboard');
+        } else {
+          navigate('/customer-dashboard');
+        }
       }
     } catch (error) {
       console.error('Sign up error:', error);

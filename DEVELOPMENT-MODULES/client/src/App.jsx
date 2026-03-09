@@ -3,6 +3,7 @@ import SignIn from './pages/SignIn';
 import SignUp from './pages/SignUp';
 import OAuthSuccess from './pages/OAuthSuccess';
 import Dashboard from './pages/Dashboard';
+import CustomerDashboard from './pages/CustomerDashboard';
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
         <Route path="/signup" element={<SignUp />} />
         <Route path="/oauth-success" element={<OAuthSuccess />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/customer-dashboard" element={<CustomerDashboard />} />
       </Routes>
     </Router>
   );

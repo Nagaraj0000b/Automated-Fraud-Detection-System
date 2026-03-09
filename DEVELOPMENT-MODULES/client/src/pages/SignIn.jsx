@@ -80,9 +80,13 @@ const SignIn = () => {
         localStorage.setItem('user', JSON.stringify(data.user));
         
         console.log('Sign in successful!', data);
-        alert(`Welcome back, ${data.user.name}!\n\nSign in successful. Token stored in localStorage.`);
         
-        navigate('/dashboard');
+        // Redirect based on role
+        if (data.user.role === 'admin' || data.user.role === 'analyst') {
+          navigate('/dashboard');
+        } else {
+          navigate('/customer-dashboard');
+        }
       }
     } catch (error) {
       console.error('Sign in error:', error);

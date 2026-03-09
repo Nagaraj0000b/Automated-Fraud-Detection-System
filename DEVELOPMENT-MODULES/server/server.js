@@ -10,6 +10,7 @@ const mongoose = require('mongoose');
 const connectDB = require('./config/database');
 const passport = require('./config/passport');
 const authRoutes = require('./routes/auth.routes');
+const transactionRoutes = require('./routes/transaction.routes');
 const authController = require('./controllers/auth.controller');
 
 const app = express();
@@ -34,6 +35,7 @@ connectDB();
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/transactions', transactionRoutes);
 
 // OAuth failure route
 app.get('/oauth-failed', authController.oauthFailure);
