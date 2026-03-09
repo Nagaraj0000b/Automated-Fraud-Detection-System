@@ -58,6 +58,9 @@ const SignIn = () => {
   };
 
   // Handle form submission
+  // ...existing code...
+
+  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -90,12 +93,18 @@ const SignIn = () => {
       }
     } catch (error) {
       console.error('Sign in error:', error);
-      const message = error.response?.data?.message || 'Cannot connect to server. Make sure the backend is running on http://localhost:5000';
+      const message =
+        error.response?.data?.message ||
+        'Cannot connect to server. Make sure the backend is running on http://localhost:5000';
       setErrors({ email: message });
     } finally {
       setIsSubmitting(false);
     }
   };
+
+// ...existing code...
+
+    
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-gray-900 via-slate-900 to-zinc-900 animate-gradient-xy">

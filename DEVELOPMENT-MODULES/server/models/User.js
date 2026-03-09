@@ -6,29 +6,52 @@ const userSchema = new mongoose.Schema({
     required: true,
     unique: true,
     lowercase: true,
-    trim: true
+    trim: true,
   },
   password: {
     type: String,
-    required: true
+    required: true,
   },
   name: {
     type: String,
-    required: true
+    required: true,
   },
   role: {
     type: String,
-    enum: ['user', 'admin', 'analyst'],
-    default: 'user'
+    enum: ['user', 'admin', 'analyst', 'auditor'],
+    default: 'user',
   },
   accountBalance: {
     type: Number,
-    default: 10000.00 // Default Mock Balance
+    default: 10000.0, // Default mock balance
+  },
+  status: {
+    type: String,
+    enum: ['active', 'inactive', 'suspended'],
+    default: 'active',
+  },
+  department: {
+    type: String,
+    default: 'General',
+  },
+  lastLogin: {
+    type: Date,
+    default: null,
   },
   createdAt: {
     type: Date,
-    default: Date.now
-  }
+    default: Date.now,
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now,
+  },
+});
+
+// Update the updatedAt field before save
+userSchema.pre('save', function (next) {
+  this.updatedAt = Date.now();
+  next();
 });
 
 const User = mongoose.model('User', userSchema);

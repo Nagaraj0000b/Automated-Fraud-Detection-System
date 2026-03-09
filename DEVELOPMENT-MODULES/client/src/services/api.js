@@ -40,8 +40,10 @@ export const authAPI = {
     return response.data;
   },
 
-  googleAuth: () => {
-    window.location.href = `${API_URL.replace('/api', '')}/api/auth/google`;
+  // OAuth: optional loginAs query for role-based redirect
+  googleAuth: (loginAs) => {
+    const base = `${API_URL.replace('/api', '')}/api/auth/google`;
+    window.location.href = loginAs ? `${base}?loginAs=${loginAs}` : base;
   },
 
   githubAuth: () => {
@@ -69,6 +71,42 @@ export const transactionAPI = {
     const response = await api.post(`/transactions/${transactionId}/dispute`, { reason });
     return response.data;
   }
+};
+
+// User Management API calls (Admin/Analyst)
+export const userAPI = {
+  getAll: async () => {
+    const response = await api.get('/users');
+    return response.data;
+  },
+  getById: async (id) => {
+    const response = await api.get(`/users/${id}`);
+    return response.data;
+  },
+  create: async (userData) => {
+    const response = await api.post('/users', userData);
+    return response.data;
+  },
+  update: async (id, userData) => {
+    const response = await api.put(`/users/${id}`, userData);
+    return response.data;
+  },
+  delete: async (id) => {
+    const response = await api.delete(`/users/${id}`);
+    return response.data;
+  },
+};
+
+// Dashboard API calls (Admin/Analyst overview)
+export const dashboardAPI = {
+  getStats: async () => {
+    const response = await api.get('/dashboard/stats');
+    return response.data;
+  },
+  getRecentUsers: async () => {
+    const response = await api.get('/dashboard/recent-users');
+    return response.data;
+  },
 };
 
 export default api;

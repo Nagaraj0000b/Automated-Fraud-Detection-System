@@ -10,7 +10,7 @@ exports.verifyToken = (req, res, next) => {
   if (!token) {
     return res.status(401).json({
       success: false,
-      message: 'Access token required'
+      message: 'Access token required',
     });
   }
 
@@ -18,10 +18,21 @@ exports.verifyToken = (req, res, next) => {
     if (err) {
       return res.status(403).json({
         success: false,
-        message: 'Invalid or expired token'
+        message: 'Invalid or expired token',
       });
     }
     req.user = decoded;
     next();
   });
+};
+
+// Require admin role middleware (must be used after verifyToken)
+exports.requireAdmin = (req, res, next) => {
+  if (!req.user || req.user.role !== 'admin') {
+    return res.status(403).json({
+      success: false,
+      message: 'Admin access required',
+    });
+  }
+  next();
 };
