@@ -19,8 +19,6 @@ body {
   animation-delay: 4s;
 }
 
-
-
 @layer base {
   :root {
     --background: 0 0% 100%;

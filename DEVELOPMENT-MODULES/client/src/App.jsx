@@ -2,6 +2,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import SignIn from './pages/SignIn';
 import SignUp from './pages/SignUp';
 import OAuthSuccess from './pages/OAuthSuccess';
+import Dashboard from './pages/Dashboard';
+import CustomerDashboard from './pages/CustomerDashboard';
 import UserDashboard from './pages/UserDashboard';
 import MainLayout from './components/layout/MainLayout';
 
@@ -24,9 +26,16 @@ function App() {
         <Route path="/signin" element={<SignIn />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/oauth-success" element={<OAuthSuccess />} />
+        {/* Legacy analyst dashboard */}
+        <Route path="/dashboard" element={<Dashboard />} />
+
+        {/* Customer dashboard (used by normal users) */}
+        <Route path="/customer-dashboard" element={<CustomerDashboard />} />
+
+        {/* Optional separate user dashboard */}
         <Route path="/user-dashboard" element={<UserDashboard />} />
 
-        {/* Dashboard Routes wrapped in MainLayout */}
+        {/* Admin / Analyst advanced dashboard area wrapped in MainLayout */}
         <Route path="/admin-dashboard" element={<MainLayout />}>
           <Route index element={<DashboardOverview />} />
           <Route path="transactions" element={<TransactionMonitoring />} />

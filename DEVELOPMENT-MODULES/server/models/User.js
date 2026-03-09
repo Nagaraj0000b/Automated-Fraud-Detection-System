@@ -6,42 +6,46 @@ const userSchema = new mongoose.Schema({
     required: true,
     unique: true,
     lowercase: true,
-    trim: true
+    trim: true,
   },
   password: {
     type: String,
-    required: true
+    required: true,
   },
   name: {
     type: String,
-    required: true
+    required: true,
   },
   role: {
     type: String,
     enum: ['user', 'admin', 'analyst', 'auditor'],
-    default: 'user'
+    default: 'user',
+  },
+  accountBalance: {
+    type: Number,
+    default: 10000.0, // Default mock balance
   },
   status: {
     type: String,
     enum: ['active', 'inactive', 'suspended'],
-    default: 'active'
+    default: 'active',
   },
   department: {
     type: String,
-    default: 'General'
+    default: 'General',
   },
   lastLogin: {
     type: Date,
-    default: null
+    default: null,
   },
   createdAt: {
     type: Date,
-    default: Date.now
+    default: Date.now,
   },
   updatedAt: {
     type: Date,
-    default: Date.now
-  }
+    default: Date.now,
+  },
 });
 
 // Update the updatedAt field before save

@@ -40,6 +40,7 @@ export const authAPI = {
     return response.data;
   },
 
+  // OAuth: optional loginAs query for role-based redirect
   googleAuth: (loginAs) => {
     const base = `${API_URL.replace('/api', '')}/api/auth/google`;
     window.location.href = loginAs ? `${base}?loginAs=${loginAs}` : base;
@@ -50,7 +51,29 @@ export const authAPI = {
   },
 };
 
-// User Management API calls
+// Transaction API calls - For Customer Dashboard
+export const transactionAPI = {
+  // Fetch user transaction history
+  getMyTransactions: async () => {
+    const response = await api.get('/transactions/my-transactions');
+    return response.data;
+  },
+
+  // Create a new transaction (Send Money)
+  createTransaction: async (data) => {
+    // data = { amount, recipient, description, transactionType: 'transfer' }
+    const response = await api.post('/transactions/create', data);
+    return response.data;
+  },
+
+  // Raise a dispute for a specific transaction
+  raiseDispute: async (transactionId, reason) => {
+    const response = await api.post(`/transactions/${transactionId}/dispute`, { reason });
+    return response.data;
+  }
+};
+
+// User Management API calls (Admin/Analyst)
 export const userAPI = {
   getAll: async () => {
     const response = await api.get('/users');
@@ -74,7 +97,7 @@ export const userAPI = {
   },
 };
 
-// Dashboard API calls
+// Dashboard API calls (Admin/Analyst overview)
 export const dashboardAPI = {
   getStats: async () => {
     const response = await api.get('/dashboard/stats');
