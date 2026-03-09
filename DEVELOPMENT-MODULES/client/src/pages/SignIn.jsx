@@ -95,19 +95,19 @@ const SignIn = () => {
                 console.log('USER ROLE DEFINED IN DB AS:', userRole);
                 console.log('TAB SELECTED BY USER:', selectedRole);
 
-                if (userRole === 'admin') {
-                    // If they are an admin, they can CHOOSE which dashboard to see
+                if (userRole === 'admin' || userRole === 'analyst') {
+                    // Admins and analysts can choose which dashboard view to see
                     if (selectedRole === 'user') {
-                        console.log('ADMIN CHOSE USER TAB -> Routing to User Dashboard');
-                        navigate('/user-dashboard');
+                        console.log('ADMIN/ANALYST CHOSE USER TAB -> Routing to Customer Dashboard');
+                        navigate('/customer-dashboard');
                     } else {
-                        console.log('ADMIN CHOSE ADMIN TAB -> Routing to Admin Dashboard');
+                        console.log('ADMIN/ANALYST CHOSE ADMIN/ANALYST TAB -> Routing to Admin Dashboard');
                         navigate('/admin-dashboard');
                     }
                 } else {
-                    // Normal users always go to the user dashboard regardless of what they clicked
-                    console.log('NORMAL USER -> Routing to /user-dashboard');
-                    navigate('/user-dashboard');
+                    // Normal users always go to the customer dashboard
+                    console.log('NORMAL USER -> Routing to /customer-dashboard');
+                    navigate('/customer-dashboard');
                 }
             }
         } catch (error) {

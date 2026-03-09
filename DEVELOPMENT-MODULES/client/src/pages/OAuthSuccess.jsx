@@ -34,9 +34,11 @@ const OAuthSuccess = () => {
         console.log('OAuth loginAs:', loginAs, '| user.role:', user.role);
 
         // Decide where to send user
-        let target = '/dashboard';
-        if (loginAs === 'user' || user.role === 'user') {
-          target = '/customer-dashboard';
+        let target = '/customer-dashboard';
+
+        // Admins/analysts usually go to the admin dashboard
+        if ((user.role === 'admin' || user.role === 'analyst') && loginAs !== 'user') {
+          target = '/admin-dashboard';
         }
 
         navigate(target);
@@ -68,7 +70,7 @@ const OAuthSuccess = () => {
         <h1 className="text-3xl font-bold text-white mb-4">Sign-in Successful!</h1>
         <p className="text-white/70 mb-6">{message}</p>
         <Link
-          to="/dashboard"
+          to="/customer-dashboard"
           className="inline-block px-6 py-3 bg-gradient-to-r from-pink-500 to-purple-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300"
         >
           Go to Dashboard
