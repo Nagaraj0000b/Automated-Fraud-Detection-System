@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const AuditLog = require('../models/AuditLog');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key';
 
@@ -73,6 +74,13 @@ exports.signup = async (req, res) => {
     // Generate JWT token
     const token = generateToken(newUser);
 
+    await AuditLog.create({
+      action: `${newUser.role.charAt(0).toUpperCase() + newUser.role.slice(1)} Registered`,
+      actor: newUser.email,
+      target: 'System',
+      result: 'Success'
+    });
+
     // Return success response
     res.status(201).json({
       success: true,
@@ -121,6 +129,13 @@ exports.signin = async (req, res) => {
     const user = await User.findOne({ email: email.toLowerCase() });
 
     if (!user) {
+      await AuditLog.create({
+        action: 'Sign In Failed',
+        actor: 'Unknown',
+        target: email.toLowerCase(),
+        result: 'Failed',
+        details: { reason: 'User not found' }
+      });
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password'
@@ -131,6 +146,13 @@ exports.signin = async (req, res) => {
     const isValidPassword = await bcrypt.compare(password, user.password);
 
     if (!isValidPassword) {
+      await AuditLog.create({
+        action: 'Sign In Failed',
+        actor: email.toLowerCase(),
+        target: 'System',
+        result: 'Failed',
+        details: { reason: 'Invalid password' }
+      });
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password'
@@ -140,6 +162,13 @@ exports.signin = async (req, res) => {
     // Generate JWT token
     const tokenExpiration = rememberMe ? '7d' : '24h';
     const token = generateToken(user, tokenExpiration);
+
+    await AuditLog.create({
+      action: `${user.role.charAt(0).toUpperCase() + user.role.slice(1)} Sign In`,
+      actor: user.email,
+      target: 'System',
+      result: 'Success'
+    });
 
     // Return success response
     res.status(200).json({
@@ -189,9 +218,8 @@ exports.oauthSuccess = (req, res) => {
 
   // Redirect to frontend OAuth success page with token (and optional loginAs)
   const clientURL = process.env.CLIENT_URL || 'http://localhost:3000';
-  const redirectUrl = `${clientURL}/oauth-success?token=${token}${
-    loginAs ? `&loginAs=${loginAs}` : ''
-  }`;
+  const redirectUrl = `${clientURL}/oauth-success?token=${token}${loginAs ? `&loginAs=${loginAs}` : ''
+    }`;
 
   res.redirect(redirectUrl);
 };

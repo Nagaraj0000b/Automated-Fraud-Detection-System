@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
+const AuditLog = require('../models/AuditLog');
 
 // GET /api/users — List all users (admin only)
 exports.getAllUsers = async (req, res) => {
@@ -71,6 +72,13 @@ exports.createUser = async (req, res) => {
 
         await newUser.save();
 
+        await AuditLog.create({
+            action: 'User Created',
+            actor: req.user ? req.user.email : 'System',
+            target: newUser.email,
+            result: 'Success'
+        });
+
         const userResponse = newUser.toObject();
         delete userResponse.password;
 
@@ -102,6 +110,14 @@ exports.updateUser = async (req, res) => {
 
         await user.save();
 
+        await AuditLog.create({
+            action: 'User Updated',
+            actor: req.user ? req.user.email : 'System',
+            target: user.email,
+            result: 'Success',
+            details: { updatedFields: Object.keys(req.body) }
+        });
+
         const userResponse = user.toObject();
         delete userResponse.password;
 
@@ -129,7 +145,15 @@ exports.deleteUser = async (req, res) => {
             return res.status(403).json({ success: false, message: 'Cannot delete your own account' });
         }
 
+        const userEmail = user.email;
         await User.findByIdAndDelete(req.params.id);
+
+        await AuditLog.create({
+            action: 'User Deleted',
+            actor: req.user ? req.user.email : 'System',
+            target: userEmail,
+            result: 'Success'
+        });
 
         res.status(200).json({
             success: true,
