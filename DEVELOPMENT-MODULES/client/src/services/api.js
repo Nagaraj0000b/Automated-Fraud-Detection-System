@@ -1,3 +1,4 @@
+// (no change at top - keep existing imports)
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
@@ -54,8 +55,10 @@ export const authAPI = {
 // Transaction API calls - For Customer Dashboard
 export const transactionAPI = {
   // Fetch user transaction history
-  getMyTransactions: async () => {
-    const response = await api.get('/transactions/my-transactions');
+  getMyTransactions: async (accountId) => {
+    const response = await api.get('/transactions/my-transactions', {
+      params: accountId ? { accountId } : {},
+    });
     return response.data;
   },
 
@@ -71,6 +74,18 @@ export const transactionAPI = {
     const response = await api.post(`/transactions/${transactionId}/dispute`, { reason });
     return response.data;
   }
+};
+
+// Bank Accounts API calls (per-user accounts)
+export const accountAPI = {
+  getMyAccounts: async () => {
+    const response = await api.get('/accounts/my-accounts');
+    return response.data;
+  },
+  addAccount: async (data) => {
+    const response = await api.post('/accounts', data);
+    return response.data;
+  },
 };
 
 // User Management API calls (Admin/Analyst)
