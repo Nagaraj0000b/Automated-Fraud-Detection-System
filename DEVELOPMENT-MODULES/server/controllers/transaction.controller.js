@@ -1,14 +1,23 @@
 const Transaction = require('../models/Transaction');
 const User = require('../models/User');
 
-// Get all transactions for the current user (Dashboard List)
+// Get all transactions for the current user (optionally filtered by account)
 exports.getUserTransactions = async (req, res) => {
   try {
-    const transactions = await Transaction.find({ user: req.user.userId })
+    const { accountId } = req.query;
+
+    const filter = { user: req.user.userId };
+    if (accountId) {
+      filter.accountId = accountId;
+    }
+
+    const transactions = await Transaction.find(filter)
       .sort({ createdAt: -1 }) // Newest first
-      .limit(20);
+      .limit(50);
+
     res.json(transactions);
   } catch (error) {
+    console.error('Error retrieving transactions:', error);
     res.status(500).json({ message: 'Error retrieving transactions' });
   }
 };
@@ -16,7 +25,7 @@ exports.getUserTransactions = async (req, res) => {
 // Create a new transaction (Simulate Payment)
 exports.createTransaction = async (req, res) => {
   try {
-    const { amount, transactionType, recipient, description } = req.body;
+    const { amount, transactionType, recipient, description, accountId, location } = req.body;
     
     // --- 🚨 BASIC FRAUD RULES (Temporary Logic) ---
     // If Amount > 50,000 OR Multiple small payments quickly (future logic)
@@ -33,10 +42,12 @@ exports.createTransaction = async (req, res) => {
 
     const newTransaction = new Transaction({
       user: req.user.userId,
+      accountId: accountId || undefined,
       amount,
       transactionType,
       recipient,
       description,
+      location,
       status, // 'approved', 'flagged', or 'blocked'
       riskScore
     });
@@ -45,7 +56,16 @@ exports.createTransaction = async (req, res) => {
     
     // Decrease User Balance ONLY if NOT BLOCKED
     if (status !== 'blocked') {
-      await User.findByIdAndUpdate(req.user.userId, { $inc: { accountBalance: -amount } });
+      if (accountId) {
+        // Adjust specific account balance when accountId is provided
+        await User.updateOne(
+          { _id: req.user.userId, 'accounts.accountId': accountId },
+          { $inc: { 'accounts.$.balance': -amount } }
+        );
+      } else {
+        // Fallback: adjust legacy single accountBalance
+        await User.findByIdAndUpdate(req.user.userId, { $inc: { accountBalance: -amount } });
+      }
     }
 
     res.status(201).json(newTransaction);
