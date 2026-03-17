@@ -25,6 +25,27 @@ const userSchema = new mongoose.Schema({
     type: Number,
     default: 10000.0, // Default mock balance
   },
+  accounts: [
+    {
+      accountId: {
+        type: String,
+        required: true,
+      },
+      bankName: {
+        type: String,
+        required: true,
+        default: 'SecureBank',
+      },
+      accountNumber: {
+        type: String,
+        required: true,
+      },
+      balance: {
+        type: Number,
+        default: 10000.0,
+      },
+    },
+  ],
   status: {
     type: String,
     enum: ['active', 'inactive', 'suspended'],

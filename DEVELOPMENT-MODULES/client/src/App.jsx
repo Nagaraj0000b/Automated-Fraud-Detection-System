@@ -5,6 +5,7 @@ import OAuthSuccess from './pages/OAuthSuccess';
 import Dashboard from './pages/Dashboard';
 import CustomerDashboard from './pages/CustomerDashboard';
 import UserDashboard from './pages/UserDashboard';
+import MakePayment from './pages/MakePayment';
 import MainLayout from './components/layout/MainLayout';
 
 import DashboardOverview from './pages/dashboard/DashboardOverview';
@@ -31,6 +32,7 @@ function App() {
 
         {/* Customer dashboard (used by normal users) */}
         <Route path="/customer-dashboard" element={<CustomerDashboard />} />
+        <Route path="/make-payment" element={<MakePayment />} />
 
         {/* Optional separate user dashboard */}
         <Route path="/user-dashboard" element={<UserDashboard />} />

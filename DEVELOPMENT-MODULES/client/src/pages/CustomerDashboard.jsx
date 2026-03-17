@@ -1,21 +1,28 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { transactionAPI } from '../services/api';
+import { transactionAPI, accountAPI } from '../services/api';
 
 const CustomerDashboard = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [balance, setBalance] = useState(10000); 
+  const [accounts, setAccounts] = useState([]);
+  const [selectedAccountId, setSelectedAccountId] = useState(null);
   
   // Navigation State
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'transactions' | 'settings'
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'transactions' | 'disputes' | 'fraud'
 
   // Dispute Modal State
   const [showDisputeModal, setShowDisputeModal] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [disputeReason, setDisputeReason] = useState("");
   const [disputeLoading, setDisputeLoading] = useState(false);
+
+  // Add Account Modal State
+  const [showAddAccountModal, setShowAddAccountModal] = useState(false);
+  const [newAccountBankName, setNewAccountBankName] = useState("");
+  const [showBankList, setShowBankList] = useState(false);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
@@ -28,18 +35,43 @@ const CustomerDashboard = () => {
     
     if(parsedUser.accountBalance) setBalance(parsedUser.accountBalance);
 
-    fetchHistory();
+    // Load accounts from backend and then load transactions for selected account
+    initializeAccountsFromBackend();
   }, [navigate]);
 
   const getAccountNumber = () => {
+    const selected = accounts.find(acc => acc.accountId === selectedAccountId);
+    if (selected?.accountNumber) return selected.accountNumber;
     if (!user || !user._id) return "**** **** **** 8842";
     const last4 = user._id.slice(-4).toUpperCase();
     return `**** **** **** ${last4}`;
   };
 
-  const fetchHistory = async () => {
+  const getCurrentBankName = () => {
+    const selected = accounts.find(acc => acc.accountId === selectedAccountId);
+    return selected?.bankName || 'SecureBank';
+  };
+
+  const initializeAccountsFromBackend = async () => {
     try {
-      const data = await transactionAPI.getMyTransactions();
+      const response = await accountAPI.getMyAccounts();
+      if (response.success && Array.isArray(response.accounts) && response.accounts.length > 0) {
+        setAccounts(response.accounts);
+        const first = response.accounts[0];
+        setSelectedAccountId(first.accountId);
+        if (typeof first.balance === 'number') {
+          setBalance(first.balance);
+        }
+        await fetchHistory(first.accountId);
+      }
+    } catch (error) {
+      console.error('Failed to load accounts from backend', error);
+    }
+  };
+
+  const fetchHistory = async (accountId) => {
+    try {
+      const data = await transactionAPI.getMyTransactions(accountId);
       setTransactions(data);
     } catch (error) {
       console.error("Failed to load transactions", error);
@@ -58,13 +90,55 @@ const CustomerDashboard = () => {
     try {
       await transactionAPI.raiseDispute(selectedTransaction._id, disputeReason);
       setShowDisputeModal(false);
-      fetchHistory(); 
+      // Refresh transactions for the currently selected bank account
+      if (selectedAccountId) {
+        fetchHistory(selectedAccountId);
+      }
     } catch (error) {
       console.error("Failed to raise dispute", error);
       alert("Failed to raise dispute: " + (error.response?.data?.message || error.message));
     } finally {
       setDisputeLoading(false);
     }
+  };
+
+  const handleAccountSelectChange = (accountId) => {
+    setSelectedAccountId(accountId);
+    setShowBankList(false);
+    const selected = accounts.find(acc => acc.accountId === accountId);
+    if (selected && typeof selected.balance === 'number') {
+      setBalance(selected.balance);
+    }
+    fetchHistory(accountId);
+  };
+
+  const openAddAccountModal = () => {
+    setNewAccountBankName("");
+    setShowAddAccountModal(true);
+  };
+
+  const addNewAccount = (event) => {
+    event.preventDefault();
+    const bankName = newAccountBankName.trim() || 'New Bank Account';
+    (async () => {
+      try {
+        const response = await accountAPI.addAccount({ bankName });
+        if (response.success && response.account) {
+          const updatedAccounts = response.accounts || [];
+          setAccounts(updatedAccounts);
+          const newAcc = response.account;
+          setSelectedAccountId(newAcc.accountId);
+          if (typeof newAcc.balance === 'number') {
+            setBalance(newAcc.balance);
+          }
+          await fetchHistory(newAcc.accountId);
+        }
+      } catch (error) {
+        console.error('Failed to add account', error);
+      } finally {
+        setShowAddAccountModal(false);
+      }
+    })();
   };
 
   const downloadCSV = () => {
@@ -123,7 +197,7 @@ const CustomerDashboard = () => {
               SB
             </div>
             <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-white/70">
-              SecureBank
+              {getCurrentBankName()}
             </h1>
           </div>
         </div>
@@ -138,6 +212,11 @@ const CustomerDashboard = () => {
             id="transactions" 
             label="Transactions" 
             icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>} 
+          />
+          <SidebarItem 
+            id="fraud" 
+            label="Fraud History" 
+            icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.29 3.86L1.82 18a1 1 0 00.86 1.5h18.64a1 1 0 00.86-1.5L13.71 3.86a1 1 0 00-1.72 0zM12 9v4m0 4h.01" /></svg>} 
           />
            <SidebarItem 
             id="disputes" 
@@ -177,23 +256,78 @@ const CustomerDashboard = () => {
         <div className="max-w-6xl mx-auto p-6 md:p-10 space-y-8">
           
           {/* HEADER */}
-          <div className="flex justify-between items-end">
-             <div>
-               <h2 className="text-3xl font-bold text-white mb-1">
-                 {activeTab === 'overview' && 'Dashboard Overview'}
-                 {activeTab === 'transactions' && 'All Transactions'}
-                 {activeTab === 'disputes' && 'Dispute Center'}
-               </h2>
-               <p className="text-white/50">Welcome back, {user?.name}</p>
-             </div>
-             {activeTab === 'transactions' && (
-                <button 
-                  onClick={downloadCSV}
-                  className="text-xs font-medium text-cyan-400 hover:text-cyan-300 uppercase tracking-wider py-2 px-4 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 transition-colors border border-cyan-500/20"
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+            <div>
+              <h2 className="text-3xl font-bold text-white mb-1">
+                {activeTab === 'overview' && 'Dashboard Overview'}
+                {activeTab === 'transactions' && 'All Transactions'}
+                {activeTab === 'fraud' && 'Fraud History'}
+                {activeTab === 'disputes' && 'Dispute Center'}
+              </h2>
+              <p className="text-white/50 flex items-center gap-2 text-sm">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-xs text-white/70">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                  {getCurrentBankName()}
+                </span>
+                <span>Welcome back, {user?.name}</span>
+              </p>
+            </div>
+             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              {accounts.length > 0 && (
+                <div className="relative inline-flex">
+                  <button
+                    type="button"
+                    onClick={() => setShowBankList((prev) => !prev)}
+                    className="text-xs font-medium text-cyan-300 hover:text-cyan-200 py-2 px-4 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 transition-colors border border-cyan-500/30 flex items-center gap-1"
+                  >
+                    <span>Change bank</span>
+                    <span className="text-[10px] opacity-80">▼</span>
+                  </button>
+                  {showBankList && (
+                    <div className="absolute right-0 mt-1 w-44 max-h-56 overflow-y-auto bg-slate-950/95 border border-cyan-500/40 rounded-xl shadow-lg shadow-cyan-900/40 z-20 backdrop-blur-sm">
+                      {accounts.map((acc) => (
+                        <button
+                          key={acc.accountId}
+                          type="button"
+                          onClick={() => handleAccountSelectChange(acc.accountId)}
+                          className={`w-full text-left px-3 py-2 text-xs transition-colors ${
+                            selectedAccountId === acc.accountId
+                              ? 'bg-cyan-600/40 text-cyan-100 font-semibold'
+                              : 'text-white/80 hover:bg-slate-800/80 hover:text-white'
+                          }`}
+                        >
+                          {acc.bankName}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              <div className="flex items-center gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={() => navigate('/make-payment')}
+                  className="text-xs font-medium text-white bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 rounded-lg px-4 py-2 shadow-md shadow-emerald-900/40"
                 >
-                  Download Report
+                  Make Payment
                 </button>
-             )}
+                <button
+                  onClick={openAddAccountModal}
+                  className="text-xs font-medium text-emerald-300 hover:text-emerald-200 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 rounded-lg px-3 py-2 transition-colors flex items-center gap-1"
+                >
+                  <span className="text-base leading-none">＋</span>
+                  <span>Add Account</span>
+                </button>
+                {activeTab === 'transactions' && (
+                  <button
+                    onClick={downloadCSV}
+                    className="text-xs font-medium text-cyan-300 hover:text-cyan-200 uppercase tracking-wider py-2 px-4 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 transition-colors border border-cyan-500/30"
+                  >
+                    Download Report
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* OVERVIEW TAB CONTENT */}
@@ -207,7 +341,7 @@ const CustomerDashboard = () => {
                 <div className="relative z-10 flex flex-col md:flex-row justify-between items-end md:items-center gap-6">
                   <div>
                     <p className="text-blue-100 text-sm font-medium tracking-wider uppercase mb-2">Total Balance</p>
-                    <h2 className="text-5xl md:text-6xl font-bold text-white tracking-tight">${balance.toLocaleString()}</h2>
+                    <h2 className="text-5xl md:text-6xl font-bold text-white tracking-tight">₹{balance.toLocaleString()}</h2>
                   </div>
                   <div className="flex flex-col items-end gap-2">
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-black/20 backdrop-blur-sm rounded-lg border border-white/10">
@@ -247,8 +381,8 @@ const CustomerDashboard = () => {
             </>
           )}
 
-          {/* TRANSACTIONS TAB CONTENT */}
-          {(activeTab === 'transactions' || activeTab === 'disputes') && (
+          {/* TRANSACTIONS / DISPUTES / FRAUD TAB CONTENT */}
+          {(activeTab === 'transactions' || activeTab === 'disputes' || activeTab === 'fraud') && (
              <div className="backdrop-blur-xl bg-white/5 rounded-3xl shadow-xl border border-white/10 overflow-hidden flex flex-col min-h-[500px]">
              
              {/* Filter Bar could go here */}
@@ -266,7 +400,15 @@ const CustomerDashboard = () => {
                  </thead>
                  <tbody className="divide-y divide-white/5">
                    {transactions
-                     .filter(tx => activeTab === 'disputes' ? tx.disputeStatus && tx.disputeStatus !== 'none' : true)
+                     .filter(tx => {
+                       if (activeTab === 'disputes') {
+                         return tx.disputeStatus && tx.disputeStatus !== 'none';
+                       }
+                       if (activeTab === 'fraud') {
+                         return tx.status === 'flagged' || tx.status === 'blocked';
+                       }
+                       return true;
+                     })
                      .map((tx) => (
                        <tr key={tx._id} className="hover:bg-white/5 transition-colors group">
                          <td className="px-8 py-5 align-top">
@@ -327,9 +469,19 @@ const CustomerDashboard = () => {
                      ))}
                  </tbody>
                </table>
-               {transactions.filter(tx => activeTab === 'disputes' ? tx.disputeStatus && tx.disputeStatus !== 'none' : true).length === 0 && (
+               {transactions.filter(tx => {
+                   if (activeTab === 'disputes') {
+                     return tx.disputeStatus && tx.disputeStatus !== 'none';
+                   }
+                   if (activeTab === 'fraud') {
+                     return tx.status === 'flagged' || tx.status === 'blocked';
+                   }
+                   return true;
+                 }).length === 0 && (
                    <div className="p-12 text-center text-white/30 italic">
-                     {activeTab === 'disputes' ? "You haven't raised any disputes yet." : "No transactions found."}
+                     {activeTab === 'disputes' && "You haven't raised any disputes yet."}
+                     {activeTab === 'fraud' && "No suspicious transactions detected for this account."}
+                     {activeTab === 'transactions' && "No transactions found."}
                    </div>
                )}
              </div>
@@ -344,8 +496,8 @@ const CustomerDashboard = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="bg-[#0f172a] border border-white/10 rounded-2xl w-full max-w-md shadow-2xl p-6 transform transition-all scale-100 opacity-100">
             <h3 className="text-xl font-bold text-white mb-2">Raise a Dispute</h3>
-            <p className="text-sm text-white/50 mb-6">
-              Reporting transaction for <span className="text-white font-medium">${selectedTransaction?.amount}</span> to <span className="text-white font-medium">{selectedTransaction?.recipient}</span>
+              <p className="text-sm text-white/50 mb-6">
+              Reporting transaction for <span className="text-white font-medium">₹{selectedTransaction?.amount}</span> to <span className="text-white font-medium">{selectedTransaction?.recipient}</span>
             </p>
             
             <div className="space-y-4">
@@ -375,6 +527,45 @@ const CustomerDashboard = () => {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Account Modal (frontend-only, local state) */}
+      {showAddAccountModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-[#0f172a] border border-white/10 rounded-2xl w-full max-w-md shadow-2xl p-6">
+            <h3 className="text-xl font-bold text-white mb-2">Add New Account</h3>
+            <p className="text-sm text-white/50 mb-6">
+              This will create a new account in the backend with a default starting balance of $1000.
+            </p>
+            <form onSubmit={addNewAccount} className="space-y-4">
+              <div>
+                <label className="text-xs font-medium text-white/70 uppercase tracking-wider mb-2 block">Bank Name</label>
+                <input
+                  type="text"
+                  value={newAccountBankName}
+                  onChange={(e) => setNewAccountBankName(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                  placeholder="e.g., SecureBank, Global Bank"
+                />
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAddAccountModal(false)}
+                  className="px-4 py-2 text-sm font-medium text-white/60 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-sm font-medium bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg shadow-lg shadow-emerald-900/20 transition-all"
+                >
+                  Save Account
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
