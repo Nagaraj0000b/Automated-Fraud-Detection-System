@@ -6,6 +6,10 @@ const transactionSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
+  accountId: {
+    type: String, // Logical account identifier (links to User.accounts.accountId)
+    required: false,
+  },
   amount: {
     type: Number,
     required: true
@@ -34,6 +38,9 @@ const transactionSchema = new mongoose.Schema({
   },
   description: {
     type: String
+  },
+  location: {
+    type: String, // e.g., "Mumbai, IN" or lat/long string
   },
   riskScore: {
     type: Number, // 0 to 1 (Fraud Likelihood)
