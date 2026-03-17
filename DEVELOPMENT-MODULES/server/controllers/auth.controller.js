@@ -212,9 +212,20 @@ exports.getMe = async (req, res) => {
 // ...existing code...
 
 // OAuth success handler
-exports.oauthSuccess = (req, res) => {
+exports.oauthSuccess = async (req, res) => {
   const token = generateToken(req.user);
   const loginAs = req.loginAs || '';
+
+  try {
+    await AuditLog.create({
+      action: `${req.user.role.charAt(0).toUpperCase() + req.user.role.slice(1)} OAuth Sign In`,
+      actor: req.user.email,
+      target: 'System',
+      result: 'Success'
+    });
+  } catch (err) {
+    console.error('AuditLog error during OAuth:', err);
+  }
 
   // Redirect to frontend OAuth success page with token (and optional loginAs)
   const clientURL = process.env.CLIENT_URL || 'http://localhost:3000';
