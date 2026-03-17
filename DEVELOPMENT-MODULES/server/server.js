@@ -12,7 +12,6 @@ const passport = require('./config/passport');
 const authRoutes = require('./routes/auth.routes');
 const userRoutes = require('./routes/user.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
-const auditLogRoutes = require('./routes/auditLogs');
 const authController = require('./controllers/auth.controller');
 
 const app = express();
@@ -39,7 +38,6 @@ connectDB();
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/dashboard', dashboardRoutes);
-app.use('/api/audit-logs', auditLogRoutes);
 
 // OAuth failure route
 app.get('/oauth-failed', authController.oauthFailure);

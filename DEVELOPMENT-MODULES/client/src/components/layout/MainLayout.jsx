@@ -1,11 +1,20 @@
 import React from 'react';
-import { Outlet, Navigate } from 'react-router-dom';
+import { Outlet, Navigate, useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
+import { LogOut } from 'lucide-react';
 
 const MainLayout = () => {
+    const navigate = useNavigate();
+
     // Read auth state synchronously to prevent render flashing
     const token = localStorage.getItem('authToken');
     const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+    const handleLogout = () => {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('user');
+        navigate('/signin');
+    };
 
     console.log('[MainLayout] Evaluating access:', { token: !!token, role: user.role });
 
@@ -30,8 +39,17 @@ const MainLayout = () => {
             <div className="flex-1 ml-64 flex flex-col overflow-hidden">
 
                 {/* We can add a Top Header here later if we want! */}
-                <header className="h-16 bg-white border-b border-slate-200 flex items-center px-6 sticky top-0 z-10">
+                <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 sticky top-0 z-10">
                     <h1 className="text-xl font-semibold text-slate-800">Admin Dashboard</h1>
+                    <div className="flex items-center gap-4">
+                        <div className="text-right">
+                            <p className="text-sm font-medium text-slate-900">{user.name || 'Admin User'}</p>
+                            <p className="text-xs text-slate-500">{user.email || ''}</p>
+                        </div>
+                        <button onClick={handleLogout} className="p-2 text-slate-400 hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors" title="Logout">
+                            <LogOut className="w-5 h-5" />
+                        </button>
+                    </div>
                 </header>
 
                 {/* This Outlet is where the actual page content goes (like specific Dashboard or Transaction views) */}
