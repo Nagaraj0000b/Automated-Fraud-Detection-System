@@ -124,4 +124,12 @@ export const dashboardAPI = {
   },
 };
 
+// Audit & Compliance API calls
+export const auditAPI = {
+  getLogs: async (params) => {
+    const response = await api.get('/audit/logs', { params });
+    return response.data;
+  },
+};
+
 export default api;

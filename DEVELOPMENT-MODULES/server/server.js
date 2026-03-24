@@ -14,6 +14,7 @@ const userRoutes = require('./routes/user.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
 const transactionRoutes = require('./routes/transaction.routes');
 const accountRoutes = require('./routes/account.routes');
+const auditRoutes = require('./routes/audit.routes');
 const authController = require('./controllers/auth.controller');
 
 const app = express();
@@ -42,6 +43,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/accounts', accountRoutes);
+app.use('/api/audit', auditRoutes);
 
 // OAuth failure route
 app.get('/oauth-failed', authController.oauthFailure);
