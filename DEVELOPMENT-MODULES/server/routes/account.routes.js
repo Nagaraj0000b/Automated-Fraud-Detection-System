@@ -1,10 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const accountController = require('../controllers/account.controller');
-const { verifyToken } = require('../middleware/auth.middleware');
+const { verifyToken, checkMaintenanceMode } = require('../middleware/auth.middleware');
 
 // All account routes require authentication
 router.use(verifyToken);
+
+// Apply maintenance mode check to all account routes
+router.use(checkMaintenanceMode);
 
 // GET /api/accounts/my-accounts - list logged-in user's accounts
 router.get('/my-accounts', accountController.getMyAccounts);
