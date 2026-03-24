@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
+const { createAuditLog } = require('./audit.controller');
 
 // GET /api/users — List all users (admin only)
 exports.getAllUsers = async (req, res) => {
@@ -95,12 +96,35 @@ exports.updateUser = async (req, res) => {
             return res.status(404).json({ success: false, message: 'User not found' });
         }
 
+        const oldStatus = user.status;
+
         if (name) user.name = name;
         if (role) user.role = role;
         if (status) user.status = status;
         if (department) user.department = department;
 
         await user.save();
+
+        if (status && status !== oldStatus) {
+            let actionName = 'User Status Update';
+            if (status === 'suspended') actionName = 'Account Suspended';
+            if (status === 'active' && oldStatus === 'suspended') actionName = 'Account Reactivated';
+
+            await createAuditLog({
+                action: actionName,
+                actor: req.user.userId || req.user.id || 'system',
+                actorName: req.user.name || 'Admin',
+                target: `User: ${user.email}`,
+                ipAddress: req.ip,
+                details: { 
+                    oldStatus, 
+                    newStatus: status,
+                    reason: status === 'suspended' ? 'Administrative suspension' : 'Access restored',
+                    summary: `User account moved from ${oldStatus} to ${status}`
+                },
+                result: 'Success'
+            });
+        }
 
         const userResponse = user.toObject();
         delete userResponse.password;
