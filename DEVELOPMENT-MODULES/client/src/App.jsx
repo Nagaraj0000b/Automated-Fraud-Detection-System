@@ -7,6 +7,7 @@ import CustomerDashboard from './pages/CustomerDashboard';
 import UserDashboard from './pages/UserDashboard';
 import MakePayment from './pages/MakePayment';
 import MainLayout from './components/layout/MainLayout';
+import AccountSuspended from './pages/AccountSuspended';
 
 import DashboardOverview from './pages/dashboard/DashboardOverview';
 import TransactionMonitoring from './pages/dashboard/TransactionMonitoring';
@@ -27,6 +28,7 @@ function App() {
         <Route path="/signin" element={<SignIn />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/oauth-success" element={<OAuthSuccess />} />
+        <Route path="/suspended" element={<AccountSuspended />} />
         {/* Legacy analyst dashboard */}
         <Route path="/dashboard" element={<Dashboard />} />
 

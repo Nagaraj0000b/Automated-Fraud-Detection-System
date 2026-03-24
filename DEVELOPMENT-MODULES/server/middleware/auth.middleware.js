@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const User = require('../models/User');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key';
 
@@ -14,15 +15,41 @@ exports.verifyToken = (req, res, next) => {
     });
   }
 
-  jwt.verify(token, JWT_SECRET, (err, decoded) => {
+  jwt.verify(token, JWT_SECRET, async (err, decoded) => {
     if (err) {
-      return res.status(403).json({
+      return res.status(401).json({
         success: false,
         message: 'Invalid or expired token',
       });
     }
-    req.user = decoded;
-    next();
+
+    try {
+      // Fetch the latest user data to check status
+      const user = await User.findById(decoded.userId || decoded.id);
+      
+      if (!user) {
+         return res.status(401).json({ success: false, message: 'User not found' });
+      }
+
+      if (user.status === 'suspended') {
+         return res.status(403).json({ 
+             success: false, 
+             code: 'ACCOUNT_SUSPENDED',
+             message: 'Your account has been suspended' 
+         });
+      }
+
+      // Attach fresh user data to the request
+      req.user = {
+          ...decoded,
+          status: user.status
+      };
+      
+      next();
+    } catch (dbError) {
+      console.error('Auth middleware DB error:', dbError);
+      return res.status(500).json({ success: false, message: 'Server error during authentication' });
+    }
   });
 };
 

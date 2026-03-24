@@ -24,6 +24,28 @@ api.interceptors.request.use(
   }
 );
 
+// Handle global responses (e.g., suspended accounts, expired tokens)
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response) {
+      // Handle Suspended Account
+      if (error.response.status === 403 && error.response.data?.code === 'ACCOUNT_SUSPENDED') {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('user');
+        window.location.href = '/suspended';
+      }
+      // Handle Unauthorized / Expired Token
+      else if (error.response.status === 401 && window.location.pathname !== '/signin') {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('user');
+        window.location.href = '/signin';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 // Auth API calls
 export const authAPI = {
   signIn: async (credentials) => {
@@ -59,6 +81,18 @@ export const transactionAPI = {
     const response = await api.get('/transactions/my-transactions', {
       params: accountId ? { accountId } : {},
     });
+    return response.data;
+  },
+
+  // Get all transactions (Admin only)
+  getAllTransactions: async (params) => {
+    const response = await api.get('/transactions/all', { params });
+    return response.data;
+  },
+
+  // Update transaction status (Admin only)
+  updateStatus: async (transactionId, status) => {
+    const response = await api.patch(`/transactions/${transactionId}/status`, { status });
     return response.data;
   },
 
@@ -120,6 +154,14 @@ export const dashboardAPI = {
   },
   getRecentUsers: async () => {
     const response = await api.get('/dashboard/recent-users');
+    return response.data;
+  },
+};
+
+// Audit & Compliance API calls
+export const auditAPI = {
+  getLogs: async (params) => {
+    const response = await api.get('/audit/logs', { params });
     return response.data;
   },
 };

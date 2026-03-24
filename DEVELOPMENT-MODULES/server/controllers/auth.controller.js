@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const { createAuditLog } = require('./audit.controller');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key';
 
@@ -69,6 +70,16 @@ exports.signup = async (req, res) => {
     });
 
     await newUser.save();
+
+    // Log the signup event
+    await createAuditLog({
+      action: 'User Signup',
+      actor: newUser._id,
+      actorName: newUser.name,
+      target: newUser.email,
+      ipAddress: req.ip,
+      result: 'Success'
+    });
 
     // Generate JWT token
     const token = generateToken(newUser);
@@ -141,6 +152,16 @@ exports.signin = async (req, res) => {
     const tokenExpiration = rememberMe ? '7d' : '24h';
     const token = generateToken(user, tokenExpiration);
 
+    // Log the signin event
+    await createAuditLog({
+      action: 'User Signin',
+      actor: user._id,
+      actorName: user.name,
+      target: user.email,
+      ipAddress: req.ip,
+      result: 'Success'
+    });
+
     // Return success response
     res.status(200).json({
       success: true,
@@ -183,9 +204,20 @@ exports.getMe = async (req, res) => {
 // ...existing code...
 
 // OAuth success handler
-exports.oauthSuccess = (req, res) => {
+exports.oauthSuccess = async (req, res) => {
   const token = generateToken(req.user);
   const loginAs = req.loginAs || '';
+
+  // Log the OAuth signin event
+  await createAuditLog({
+    action: 'OAuth Signin',
+    actor: req.user._id,
+    actorName: req.user.name,
+    target: req.user.email,
+    ipAddress: req.ip,
+    details: { provider: req.user.provider || 'unknown', loginAs },
+    result: 'Success'
+  });
 
   // Redirect to frontend OAuth success page with token (and optional loginAs)
   const clientURL = process.env.CLIENT_URL || 'http://localhost:3000';
