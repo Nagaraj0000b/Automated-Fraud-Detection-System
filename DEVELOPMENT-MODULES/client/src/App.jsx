@@ -19,6 +19,7 @@ import ModelPerformance from './pages/dashboard/ModelPerformance';
 import ComplianceLogs from './pages/dashboard/ComplianceLogs';
 import UserManagement from './pages/dashboard/UserManagement';
 import SystemSettings from './pages/dashboard/SystemSettings';
+import SupportTickets from './pages/dashboard/SupportTickets';
 
 function App() {
   return (
@@ -51,6 +52,7 @@ function App() {
           <Route path="performance" element={<ModelPerformance />} />
           <Route path="audit" element={<ComplianceLogs />} />
           <Route path="users" element={<UserManagement />} />
+          <Route path="support" element={<SupportTickets />} />
           <Route path="settings" element={<SystemSettings />} />
         </Route>
       </Routes>

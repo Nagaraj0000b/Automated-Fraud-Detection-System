@@ -2,7 +2,7 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
     LayoutDashboard, Activity, ShieldAlert, ListFilter,
-    BrainCircuit, BarChart4, FileText, Users, Settings
+    BrainCircuit, BarChart4, FileText, Users, Settings, LifeBuoy
 } from 'lucide-react';
 
 const Sidebar = () => {
@@ -15,6 +15,7 @@ const Sidebar = () => {
         { name: 'Model Performance', path: '/admin-dashboard/performance', icon: <BarChart4 size={20} /> },
         { name: 'Compliance & Audit', path: '/admin-dashboard/audit', icon: <FileText size={20} /> },
         { name: 'User Management', path: '/admin-dashboard/users', icon: <Users size={20} /> },
+        { name: 'Support Requests', path: '/admin-dashboard/support', icon: <LifeBuoy size={20} /> },
         { name: 'System Settings', path: '/admin-dashboard/settings', icon: <Settings size={20} /> },
     ];
 
