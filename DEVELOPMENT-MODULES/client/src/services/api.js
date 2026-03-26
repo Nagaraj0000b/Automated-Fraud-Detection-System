@@ -162,6 +162,18 @@ export const dashboardAPI = {
   },
 };
 
+// Support / Customer Care API
+export const supportAPI = {
+  createTicket: async (payload) => {
+    const response = await api.post('/support/contact', payload);
+    return response.data;
+  },
+  getTickets: async () => {
+    const response = await api.get('/support/tickets');
+    return response.data;
+  },
+};
+
 // Audit & Compliance API calls
 export const auditAPI = {
   getLogs: async (params) => {
