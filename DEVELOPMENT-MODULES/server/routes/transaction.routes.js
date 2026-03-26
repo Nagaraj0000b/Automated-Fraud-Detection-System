@@ -6,6 +6,9 @@ const authMiddleware = require('../middleware/auth.middleware');
 // Protect all transaction routes (Must be logged in)
 router.use(authMiddleware.verifyToken);
 
+// Apply maintenance mode check to all transaction routes
+router.use(authMiddleware.checkMaintenanceMode);
+
 // Admin / Analyst Routes
 const authorizeAdmin = (req, res, next) => {
   if (['admin', 'analyst', 'auditor'].includes(req.user.role)) {

@@ -1,7 +1,38 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const Setting = require('../models/Setting');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key';
+
+// Middleware to check if system is in maintenance mode
+exports.checkMaintenanceMode = async (req, res, next) => {
+  try {
+    const settings = await Setting.findOne();
+    
+    // If maintenance mode is ON and user is NOT an admin (or not logged in yet)
+    if (settings && settings.maintenanceMode) {
+      // We check if the user is already attached to req (after verifyToken)
+      // or if we should skip this for admin routes specifically.
+      // For now, let's just make it a standalone middleware that routes can use.
+      
+      // If user is logged in, check role
+      if (req.user && req.user.role === 'admin') {
+        return next();
+      }
+      
+      return res.status(503).json({
+        success: false,
+        code: 'MAINTENANCE_MODE',
+        message: 'System is currently under maintenance. Please try again later.',
+      });
+    }
+    
+    next();
+  } catch (error) {
+    console.error('Maintenance middleware error:', error);
+    next(); // Fallback to allowing access if settings check fails
+  }
+};
 
 // Verify JWT token middleware
 exports.verifyToken = (req, res, next) => {

@@ -35,6 +35,10 @@ api.interceptors.response.use(
         localStorage.removeItem('user');
         window.location.href = '/suspended';
       }
+      // Handle Maintenance Mode
+      else if (error.response.status === 503 && error.response.data?.code === 'MAINTENANCE_MODE') {
+        window.location.href = '/maintenance';
+      }
       // Handle Unauthorized / Expired Token
       else if (error.response.status === 401 && window.location.pathname !== '/signin') {
         localStorage.removeItem('authToken');
@@ -164,6 +168,38 @@ export const auditAPI = {
     const response = await api.get('/audit/logs', { params });
     return response.data;
   },
+};
+
+// System Settings API calls (Admin only)
+export const settingAPI = {
+  getSettings: async () => {
+    const response = await api.get('/settings');
+    return response.data;
+  },
+  updateSettings: async (settings) => {
+    const response = await api.put('/settings', settings);
+    return response.data;
+  },
+};
+
+// Risk Rules API calls (Admin/Analyst)
+export const ruleAPI = {
+  getAllRules: async () => {
+    const response = await api.get('/rules');
+    return response.data;
+  },
+  createRule: async (ruleData) => {
+    const response = await api.post('/rules', ruleData);
+    return response.data;
+  },
+  updateRule: async (id, ruleData) => {
+    const response = await api.put(`/rules/${id}`, ruleData);
+    return response.data;
+  },
+  deleteRule: async (id) => {
+    const response = await api.delete(`/rules/${id}`);
+    return response.data;
+  }
 };
 
 export default api;
