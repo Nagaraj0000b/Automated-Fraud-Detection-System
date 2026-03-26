@@ -143,9 +143,9 @@ Risk Score = Sum of all rule contributions (capped at 100)
 
 | Score Range | Risk Level | Action | Color |
 |-------------|-----------|--------|-------|
-| 0 – 49 | LOW | ✅ Approved | Green |
-| 50 – 89 | MEDIUM | ⚠️ Review | Orange |
-| 90 – 100 | HIGH | 🚨 Rejected/Blocked | Red |
+| 0 – 49 | LOW |  Approved | Green |
+| 50 – 89 | MEDIUM |  Review | Orange |
+| 90 – 100 | HIGH |  Rejected/Blocked | Red |
 
 ---
 
@@ -176,7 +176,7 @@ Risk Score = Sum of all rule contributions (capped at 100)
               │                    │                    │
               ▼                    ▼                    ▼
          Score 0-49           Score 50-89          Score 90-100
-         ✅ APPROVED          ⚠️ REVIEW            🚨 REJECTED
+          APPROVED           REVIEW             REJECTED
 ```
 
 ---
