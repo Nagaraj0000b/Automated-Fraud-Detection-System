@@ -2,19 +2,16 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
     LayoutDashboard, Activity, ShieldAlert, ListFilter,
-    BrainCircuit, BarChart4, FileText, Users, Settings
+    BrainCircuit, BarChart4, FileText, Users, Settings, UserCheck
 } from 'lucide-react';
 
 const Sidebar = () => {
     const navItems = [
         { name: 'Dashboard Overview', path: '/admin-dashboard', icon: <LayoutDashboard size={20} /> },
         { name: 'Transaction Monitoring', path: '/admin-dashboard/transactions', icon: <Activity size={20} /> },
-        { name: 'Risk Rules Management', path: '/admin-dashboard/risk-rules', icon: <ShieldAlert size={20} /> },
-        { name: 'Fraud Pattern Analytics', path: '/admin-dashboard/fraud-patterns', icon: <ListFilter size={20} /> },
-        { name: 'AI Model Management', path: '/admin-dashboard/ai-models', icon: <BrainCircuit size={20} /> },
-        { name: 'Model Performance', path: '/admin-dashboard/performance', icon: <BarChart4 size={20} /> },
         { name: 'Compliance & Audit', path: '/admin-dashboard/audit', icon: <FileText size={20} /> },
         { name: 'User Management', path: '/admin-dashboard/users', icon: <Users size={20} /> },
+        { name: 'Reactivation Requests', path: '/admin-dashboard/reactivations', icon: <UserCheck size={20} /> },
         { name: 'System Settings', path: '/admin-dashboard/settings', icon: <Settings size={20} /> },
     ];
 

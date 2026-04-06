@@ -16,7 +16,6 @@ const transactionRoutes = require('./routes/transaction.routes');
 const accountRoutes = require('./routes/account.routes');
 const auditRoutes = require('./routes/audit.routes');
 const settingRoutes = require('./routes/setting.routes');
-const riskRuleRoutes = require('./routes/riskRule.routes');
 const authController = require('./controllers/auth.controller');
 
 const app = express();
@@ -47,7 +46,6 @@ app.use('/api/transactions', transactionRoutes);
 app.use('/api/accounts', accountRoutes);
 app.use('/api/audit', auditRoutes);
 app.use('/api/settings', settingRoutes);
-app.use('/api/rules', riskRuleRoutes);
 
 // OAuth failure route
 app.get('/oauth-failed', authController.oauthFailure);
@@ -70,15 +68,19 @@ app.get('/api/health', (req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔐 Sign-in endpoint: POST http://localhost:${PORT}/api/auth/signin`);
-  console.log(`📝 Sign-up endpoint: POST http://localhost:${PORT}/api/auth/signup`);
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running on http://localhost:${PORT}`);
+    console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🔐 Sign-in endpoint: POST http://localhost:${PORT}/api/auth/signin`);
+    console.log(`📝 Sign-up endpoint: POST http://localhost:${PORT}/api/auth/signup`);
 
-  const googleConfigured = process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_ID !== 'your-google-client-id-here';
-  const githubConfigured = process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_ID !== 'your-github-client-id-here';
+    const googleConfigured = process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_ID !== 'your-google-client-id-here';
+    const githubConfigured = process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_ID !== 'your-github-client-id-here';
 
-  console.log(`🔑 Google OAuth: ${googleConfigured ? '✅ Configured' : '❌ Not configured'}`);
-  console.log(`🔑 GitHub OAuth: ${githubConfigured ? '✅ Configured' : '❌ Not configured'}`);
-});
+    console.log(`🔑 Google OAuth: ${googleConfigured ? '✅ Configured' : '❌ Not configured'}`);
+    console.log(`🔑 GitHub OAuth: ${githubConfigured ? '✅ Configured' : '❌ Not configured'}`);
+  });
+}
+
+module.exports = app;
