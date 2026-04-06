@@ -148,6 +148,18 @@ export const userAPI = {
     const response = await api.delete(`/users/${id}`);
     return response.data;
   },
+  submitReactivationRequest: async (data) => {
+    const response = await api.post('/users/reactivation-request', data);
+    return response.data;
+  },
+  getReactivationRequests: async () => {
+    const response = await api.get('/users/reactivation-requests');
+    return response.data;
+  },
+  updateReactivationStatus: async (id, data) => {
+    const response = await api.patch(`/users/reactivation-requests/${id}/status`, data);
+    return response.data;
+  }
 };
 
 // Dashboard API calls (Admin/Analyst overview)
@@ -192,26 +204,6 @@ export const settingAPI = {
     const response = await api.put('/settings', settings);
     return response.data;
   },
-};
-
-// Risk Rules API calls (Admin/Analyst)
-export const ruleAPI = {
-  getAllRules: async () => {
-    const response = await api.get('/rules');
-    return response.data;
-  },
-  createRule: async (ruleData) => {
-    const response = await api.post('/rules', ruleData);
-    return response.data;
-  },
-  updateRule: async (id, ruleData) => {
-    const response = await api.put(`/rules/${id}`, ruleData);
-    return response.data;
-  },
-  deleteRule: async (id) => {
-    const response = await api.delete(`/rules/${id}`);
-    return response.data;
-  }
 };
 
 export default api;

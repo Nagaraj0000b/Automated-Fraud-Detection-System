@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
+const ReactivationRequest = require('../models/ReactivationRequest');
 const { createAuditLog } = require('./audit.controller');
 
 // GET /api/users — List all users (admin only)
@@ -161,6 +162,120 @@ exports.deleteUser = async (req, res) => {
         });
     } catch (error) {
         console.error('Delete user error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+};
+
+// POST /api/users/reactivation-request — Create a reactivation request (Public)
+exports.createReactivationRequest = async (req, res) => {
+    try {
+        const { email, reason } = req.body;
+
+        if (!email || !reason) {
+            return res.status(400).json({ success: false, message: 'Email and reason are required' });
+        }
+
+        const user = await User.findOne({ email: email.toLowerCase() });
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User with this email not found' });
+        }
+
+        if (user.status !== 'suspended') {
+            return res.status(400).json({ success: false, message: 'Account is not suspended' });
+        }
+
+        // Check if there's already a pending request
+        const existingRequest = await ReactivationRequest.findOne({ user: user._id, status: 'pending' });
+        if (existingRequest) {
+            return res.status(409).json({ success: false, message: 'You already have a pending reactivation request' });
+        }
+
+        const newRequest = new ReactivationRequest({
+            user: user._id,
+            email: email.toLowerCase(),
+            reason
+        });
+
+        await newRequest.save();
+
+        res.status(201).json({
+            success: true,
+            message: 'Reactivation request submitted successfully'
+        });
+    } catch (error) {
+        console.error('Create reactivation request error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+};
+
+// GET /api/users/reactivation-requests — List all requests (Admin only)
+exports.getReactivationRequests = async (req, res) => {
+    try {
+        const requests = await ReactivationRequest.find()
+            .populate('user', 'name email status')
+            .sort({ createdAt: -1 });
+
+        res.status(200).json({
+            success: true,
+            count: requests.length,
+            requests
+        });
+    } catch (error) {
+        console.error('Get reactivation requests error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+};
+
+// PATCH /api/users/reactivation-requests/:id/status — Update request status (Admin only)
+exports.updateReactivationRequestStatus = async (req, res) => {
+    try {
+        const { status, adminNotes } = req.body;
+        const requestId = req.params.id;
+
+        if (!['approved', 'rejected'].includes(status)) {
+            return res.status(400).json({ success: false, message: 'Invalid status' });
+        }
+
+        const request = await ReactivationRequest.findById(requestId).populate('user');
+        if (!request) {
+            return res.status(404).json({ success: false, message: 'Request not found' });
+        }
+
+        request.status = status;
+        if (adminNotes) request.adminNotes = adminNotes;
+        await request.save();
+
+        // If approved, reactivate the user
+        if (status === 'approved' && request.user) {
+            const user = request.user;
+            const oldStatus = user.status;
+            user.status = 'active';
+            await user.save();
+
+            await createAuditLog({
+                action: 'Account Reactivated',
+                actor: req.user.userId || req.user.id || 'system',
+                actorName: req.user.name || 'Admin',
+                target: `User: ${user.email}`,
+                ipAddress: req.ip,
+                details: { 
+                    oldStatus, 
+                    newStatus: 'active',
+                    reason: 'Reactivation request approved',
+                    requestId,
+                    summary: `User account reactivated after manual review of request`
+                },
+                result: 'Success'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: `Request ${status} successfully`,
+            request
+        });
+    } catch (error) {
+        console.error('Update reactivation request error:', error);
         res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };

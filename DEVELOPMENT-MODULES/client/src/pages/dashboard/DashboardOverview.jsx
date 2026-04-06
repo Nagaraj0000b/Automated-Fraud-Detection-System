@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Activity, CreditCard, ShieldAlert, Users, Loader2 } from "lucide-react";
+import { Activity, CreditCard, ShieldAlert, Users, Loader2, AlertTriangle } from "lucide-react";
 import { dashboardAPI } from '@/services/api';
 
 export default function DashboardOverview() {
@@ -53,28 +53,28 @@ export default function DashboardOverview() {
 
     const statCards = [
         {
-            title: "Total Transactions (24h)",
-            value: stats?.transactions?.total24h?.toLocaleString() || '0',
+            title: "Total Transactions",
+            value: stats?.transactions?.total?.toLocaleString() || '0',
             icon: <CreditCard className="h-4 w-4 text-slate-500" />,
-            trend: stats?.transactions?.note || 'Pending setup'
+            trend: `Approval Rate: ${stats?.transactions?.approvalRate || '0%'}`
         },
         {
-            title: "Flagged Frauds",
-            value: stats?.transactions?.flaggedFrauds?.toLocaleString() || '0',
-            icon: <ShieldAlert className="h-4 w-4 text-red-500" />,
-            trend: stats?.transactions?.note || 'Pending setup'
+            title: "Flagged (Review)",
+            value: stats?.transactions?.flagged?.toLocaleString() || '0',
+            icon: <ShieldAlert className="h-4 w-4 text-amber-500" />,
+            trend: "Requires manual check"
         },
         {
-            title: "Active AI Models",
-            value: stats?.models?.activeModels?.toString() || '0',
-            icon: <Activity className="h-4 w-4 text-blue-500" />,
-            trend: stats?.models?.note || 'Pending setup'
+            title: "Blocked (Fraud)",
+            value: stats?.transactions?.blocked?.toLocaleString() || '0',
+            icon: <AlertTriangle className="h-4 w-4 text-red-500" />,
+            trend: "Auto-detected fraud"
         },
         {
             title: "System Users",
             value: stats?.users?.total?.toString() || '0',
-            icon: <Users className="h-4 w-4 text-slate-500" />,
-            trend: `${stats?.users?.active || 0} active, ${stats?.users?.recentSignups || 0} new this week`
+            icon: <Users className="h-4 w-4 text-blue-500" />,
+            trend: `${stats?.users?.active || 0} active accounts`
         },
     ];
 

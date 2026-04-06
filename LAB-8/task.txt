@@ -1,0 +1,21 @@
+CS 331 (Software Engineering Lab)
+Assignment 8 
+
+Part A:
+
+The “Data Access Layer” (DAL) is a crucial component in software
+application architecture that serves as an abstraction layer between the
+application logic and the database.
+● Create the databases and necessary tables.
+● Implement the data access layer code components.
+
+
+Part B:
+
+White Box Testing (also known as Glass Box Testing) is a testing
+technique where the tester has full knowledge of the internal structure,
+code, and logic of the application. Black Box Testing (also known as
+Functional Testing) is a software testing method where the tester
+evaluates the software without knowing its internal code or structure.
+Write different test cases for performing White Box Testing and Black
+Box Testing. Also, perform the testing using these test cases.

@@ -1,35 +1,25 @@
-import { useState } from 'react';
-import { AlertOctagon, Loader2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { AlertOctagon, Send, CheckCircle, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { supportAPI } from '../services/api';
+import { userAPI } from '@/services/api';
 
 export default function AccountSuspended() {
     const navigate = useNavigate();
     const [email, setEmail] = useState('');
-    const [message, setMessage] = useState('');
+    const [reason, setReason] = useState('');
     const [loading, setLoading] = useState(false);
-    const [feedback, setFeedback] = useState({ type: '', text: '' });
+    const [submitted, setSubmitted] = useState(false);
+    const [error, setError] = useState(null);
 
-    const submitRequest = async (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        setFeedback({ type: '', text: '' });
-
-        if (!email.trim() || !message.trim()) {
-            setFeedback({ type: 'error', text: 'Please enter your email and a short message.' });
-            return;
-        }
-
         setLoading(true);
+        setError(null);
         try {
-            const res = await supportAPI.createTicket({
-                email: email.trim(),
-                message: message.trim(),
-                type: 'ACCOUNT_SUSPENDED',
-            });
-            setFeedback({ type: 'success', text: res.message || 'Request sent to support.' });
-            setMessage('');
+            await userAPI.submitReactivationRequest({ email, reason });
+            setSubmitted(true);
         } catch (err) {
-            setFeedback({ type: 'error', text: err.response?.data?.message || 'Failed to send request. Please try again.' });
+            setError(err.response?.data?.message || 'Failed to submit request. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -37,70 +27,95 @@ export default function AccountSuspended() {
 
     return (
         <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
-            <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center border border-red-100">
-                <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <AlertOctagon className="w-10 h-10 text-red-600" />
+            <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 border border-red-100">
+                <div className="text-center mb-6">
+                    <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <AlertOctagon className="w-10 h-10 text-red-600" />
+                    </div>
+                    
+                    <h1 className="text-2xl font-bold text-slate-900 mb-2">
+                        Account Suspended
+                    </h1>
+                    
+                    <p className="text-slate-600 text-sm leading-relaxed">
+                        Access to your dashboard and transactions has been restricted due to detected suspicious activity.
+                    </p>
                 </div>
-                
-                <h1 className="text-2xl font-bold text-slate-900 mb-3">
-                    Account Suspended
-                </h1>
-                
-                <p className="text-slate-600 mb-8 leading-relaxed">
-                    Your account has been temporarily suspended due to a violation of our terms of service or detected suspicious activity. 
-                    For security reasons, access to your dashboard and transactions has been restricted.
-                </p>
 
-                <form onSubmit={submitRequest} className="space-y-4 text-left">
-                    {feedback.text && (
-                        <div className={`text-xs px-3 py-2 rounded-md ${feedback.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
-                            {feedback.text}
+                {!submitted ? (
+                    <div className="space-y-6">
+                        <div className="bg-slate-50 p-4 rounded-lg border border-slate-100">
+                            <h2 className="text-sm font-semibold text-slate-900 mb-3 flex items-center">
+                                Request Account Reactivation
+                            </h2>
+                            <form onSubmit={handleSubmit} className="space-y-4">
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-500 mb-1">Registered Email</label>
+                                    <input 
+                                        type="email" 
+                                        required
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        placeholder="your@email.com"
+                                        className="w-full px-3 py-2 text-sm border border-slate-200 rounded-md outline-none focus:border-blue-500 transition-colors"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-500 mb-1">Reason for appeal</label>
+                                    <textarea 
+                                        required
+                                        value={reason}
+                                        onChange={(e) => setReason(e.target.value)}
+                                        placeholder="Explain why your account should be reactivated..."
+                                        rows={3}
+                                        className="w-full px-3 py-2 text-sm border border-slate-200 rounded-md outline-none focus:border-blue-500 transition-colors"
+                                    />
+                                </div>
+                                {error && <p className="text-xs text-red-600 bg-red-50 p-2 rounded">{error}</p>}
+                                <button 
+                                    type="submit"
+                                    disabled={loading}
+                                    className="w-full py-2.5 px-4 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-800 transition-colors flex items-center justify-center disabled:opacity-50"
+                                >
+                                    {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
+                                    Submit Appeal
+                                </button>
+                            </form>
                         </div>
-                    )}
 
-                    <div>
-                        <label className="block text-xs font-medium text-slate-700 mb-1">Your email</label>
-                        <input
-                            type="email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400/60"
-                            placeholder="you@example.com"
-                        />
+                        <div className="flex flex-col space-y-3 pt-2">
+                            <button 
+                                onClick={() => window.location.href = "mailto:support@fraudguard.ai?subject=Account%20Suspension%20Appeal"}
+                                className="w-full py-2 text-slate-500 text-sm font-medium hover:text-slate-800 transition-colors"
+                            >
+                                Contact Support via Email
+                            </button>
+                            
+                            <button 
+                                onClick={() => navigate('/signin')}
+                                className="w-full py-2.5 px-4 bg-white text-slate-700 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
+                            >
+                                Return to Sign In
+                            </button>
+                        </div>
                     </div>
-
-                    <div>
-                        <label className="block text-xs font-medium text-slate-700 mb-1">Reason / details</label>
-                        <textarea
-                            rows={3}
-                            value={message}
-                            onChange={(e) => setMessage(e.target.value)}
-                            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400/60"
-                            placeholder="Explain why you believe your account or payment should be unblocked."
-                        />
-                    </div>
-
-                    <div className="space-y-3 pt-1">
+                ) : (
+                    <div className="text-center py-6">
+                        <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <CheckCircle className="w-8 h-8 text-emerald-600" />
+                        </div>
+                        <h2 className="text-lg font-bold text-slate-900 mb-2">Request Submitted</h2>
+                        <p className="text-slate-600 text-sm mb-6">
+                            Your appeal has been received. Our security team will review it and update your account status within 24-48 hours.
+                        </p>
                         <button 
-                            type="submit"
-                            disabled={loading}
-                            className="w-full py-3 px-4 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed"
+                            onClick={() => navigate('/signin')}
+                            className="w-full py-2.5 px-4 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-800 transition-colors"
                         >
-                            {loading ? (
-                                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sending request...</>
-                            ) : (
-                                'Send unblock request to admin'
-                            )}
+                            Back to Login
                         </button>
-
-                    <button 
-                        onClick={() => navigate('/signin')}
-                        className="w-full py-3 px-4 bg-white text-slate-700 font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
-                    >
-                        Return to Sign In
-                    </button>
                     </div>
-                </form>
+                )}
             </div>
             
             <p className="mt-8 text-sm text-slate-400">

@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const Transaction = require('../models/Transaction');
 
 // GET /api/dashboard/stats — Aggregate overview stats
 exports.getStats = async (req, res) => {
@@ -26,8 +27,16 @@ exports.getStats = async (req, res) => {
         const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
         const recentUsers = await User.countDocuments({ createdAt: { $gte: sevenDaysAgo } });
 
-        // Placeholder stats for future modules (transactions, models, etc.)
-        // These will be replaced with real data once those models are built
+        // Real transaction stats
+        const totalTxns = await Transaction.countDocuments();
+        const flaggedTxns = await Transaction.countDocuments({ status: 'flagged' });
+        const blockedTxns = await Transaction.countDocuments({ status: 'blocked' });
+        const approvedTxns = await Transaction.countDocuments({ status: 'approved' });
+
+        const approvalRate = totalTxns > 0 
+            ? ((approvedTxns / totalTxns) * 100).toFixed(1) + '%' 
+            : '0%';
+
         const stats = {
             users: {
                 total: totalUsers,
@@ -38,20 +47,11 @@ exports.getStats = async (req, res) => {
                 byStatus: usersByStatus
             },
             transactions: {
-                total24h: 0,
-                flaggedFrauds: 0,
-                approvalRate: '0%',
-                note: 'Transaction model not yet built'
-            },
-            models: {
-                activeModels: 0,
-                avgAccuracy: '0%',
-                note: 'AI Model module not yet built'
-            },
-            riskRules: {
-                totalRules: 0,
-                activeRules: 0,
-                note: 'Risk Rules module not yet built'
+                total: totalTxns,
+                flagged: flaggedTxns,
+                blocked: blockedTxns,
+                approved: approvedTxns,
+                approvalRate
             }
         };
 
