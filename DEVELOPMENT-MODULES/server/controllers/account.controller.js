@@ -1,24 +1,10 @@
 const mongoose = require('mongoose');
 const User = require('../models/User');
 
-// Ensure the user has at least one default account (for existing users)
+// Previously this ensured a default "SecureBank" account.
+// Default accounts are now disabled; users start with no accounts
+// and explicitly add banks via the Add Account flow.
 const ensureDefaultAccount = async (user) => {
-  if (user.accounts && user.accounts.length > 0) {
-    return user;
-  }
-
-  const last4 = user._id.toString().slice(-4).toUpperCase();
-
-  user.accounts = [
-    {
-      accountId: `acc-${user._id.toString()}`,
-      bankName: 'SecureBank',
-      accountNumber: `**** **** **** ${last4}`,
-      balance: typeof user.accountBalance === 'number' ? user.accountBalance : 10000,
-    },
-  ];
-
-  await user.save();
   return user;
 };
 
@@ -30,11 +16,9 @@ exports.getMyAccounts = async (req, res) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    const updatedUser = await ensureDefaultAccount(user);
-
     return res.status(200).json({
       success: true,
-      accounts: updatedUser.accounts,
+      accounts: user.accounts || [],
     });
   } catch (error) {
     console.error('getMyAccounts error:', error);
@@ -51,8 +35,6 @@ exports.addAccount = async (req, res) => {
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
-
-    await ensureDefaultAccount(user);
 
     const newAccountId = new mongoose.Types.ObjectId().toString();
     const randomLast4 = Math.floor(1000 + Math.random() * 9000);

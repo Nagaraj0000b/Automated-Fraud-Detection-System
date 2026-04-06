@@ -16,6 +16,7 @@ import ComplianceLogs from './pages/dashboard/ComplianceLogs';
 import UserManagement from './pages/dashboard/UserManagement';
 import ReactivationRequests from './pages/dashboard/ReactivationRequests';
 import SystemSettings from './pages/dashboard/SystemSettings';
+import SupportTickets from './pages/dashboard/SupportTickets';
 
 function App() {
   return (
@@ -45,7 +46,8 @@ function App() {
           <Route path="transactions" element={<TransactionMonitoring />} />
           <Route path="audit" element={<ComplianceLogs />} />
           <Route path="users" element={<UserManagement />} />
-          <Route path="reactivations" element={<ReactivationRequests />} />
+          <Route path="reactivations" element={<ReactivationRequests />} />  
+          <Route path="support" element={<SupportTickets />} />
           <Route path="settings" element={<SystemSettings />} />
         </Route>
       </Routes>

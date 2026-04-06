@@ -34,7 +34,6 @@ const userSchema = new mongoose.Schema({
       bankName: {
         type: String,
         required: true,
-        default: 'SecureBank',
       },
       accountNumber: {
         type: String,
