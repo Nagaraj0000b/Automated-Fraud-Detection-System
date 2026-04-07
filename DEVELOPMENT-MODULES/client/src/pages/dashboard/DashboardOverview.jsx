@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Activity, CreditCard, ShieldAlert, Users, Loader2, AlertTriangle } from "lucide-react";
 import { dashboardAPI } from '@/services/api';
+import { useNavigate } from 'react-router-dom';
 
 export default function DashboardOverview() {
     const [stats, setStats] = useState(null);
     const [recentUsers, setRecentUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const navigate = useNavigate();
 
     useEffect(() => {
         fetchDashboardData();
@@ -56,25 +58,29 @@ export default function DashboardOverview() {
             title: "Total Transactions",
             value: stats?.transactions?.total?.toLocaleString() || '0',
             icon: <CreditCard className="h-4 w-4 text-slate-500" />,
-            trend: `Approval Rate: ${stats?.transactions?.approvalRate || '0%'}`
+            trend: `Approval Rate: ${stats?.transactions?.approvalRate || '0%'}`,
+            onClick: () => navigate('/admin-dashboard/transactions')
         },
         {
             title: "Flagged (Review)",
             value: stats?.transactions?.flagged?.toLocaleString() || '0',
             icon: <ShieldAlert className="h-4 w-4 text-amber-500" />,
-            trend: "Requires manual check"
+            trend: "Requires manual check",
+            onClick: () => navigate('/admin-dashboard/transactions?status=flagged')
         },
         {
             title: "Blocked (Fraud)",
             value: stats?.transactions?.blocked?.toLocaleString() || '0',
             icon: <AlertTriangle className="h-4 w-4 text-red-500" />,
-            trend: "Auto-detected fraud"
+            trend: "Auto-detected fraud",
+            onClick: () => navigate('/admin-dashboard/transactions?status=blocked')
         },
         {
             title: "System Users",
             value: stats?.users?.total?.toString() || '0',
             icon: <Users className="h-4 w-4 text-blue-500" />,
-            trend: `${stats?.users?.active || 0} active accounts`
+            trend: `${stats?.users?.active || 0} active accounts`,
+            onClick: () => navigate('/admin-dashboard/users')
         },
     ];
 
@@ -88,7 +94,7 @@ export default function DashboardOverview() {
             {/* Stats Grid */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 {statCards.map((stat, i) => (
-                    <Card key={i} className="hover:shadow-md transition-shadow">
+                    <Card key={i} className="hover:shadow-md transition-shadow cursor-pointer hover:bg-slate-50" onClick={stat.onClick}>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium text-slate-600">
                                 {stat.title}
@@ -113,7 +119,11 @@ export default function DashboardOverview() {
                     <CardContent>
                         <div className="space-y-4">
                             {stats?.users?.byRole?.map((item, i) => (
-                                <div key={i} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
+                                <div 
+                                    key={i} 
+                                    className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100 cursor-pointer hover:bg-slate-100 transition-colors"
+                                    onClick={() => navigate(`/admin-dashboard/users?role=${item._id.toLowerCase()}`)}
+                                >
                                     <span className="text-sm font-medium text-slate-900 capitalize">{item._id}</span>
                                     <span className="text-sm font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full">{item.count}</span>
                                 </div>
