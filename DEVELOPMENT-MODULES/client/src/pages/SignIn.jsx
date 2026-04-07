@@ -23,57 +23,41 @@ const SignIn = () => {
 
     const activeRole = ROLES.find(r => r.key === selectedRole);
 
-    // Email validation
     const validateEmail = (email) => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         return emailRegex.test(email);
     };
 
-    // Form validation
     const validateForm = () => {
         const newErrors = {};
-
         if (!formData.email.trim()) {
             newErrors.email = 'Email is required';
         } else if (!validateEmail(formData.email)) {
             newErrors.email = 'Please enter a valid email address';
         }
-
         if (!formData.password) {
             newErrors.password = 'Password is required';
         } else if (formData.password.length < 6) {
             newErrors.password = 'Password must be at least 6 characters';
         }
-
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
 
-    // Handle input changes
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
         setFormData(prev => ({
             ...prev,
             [name]: type === 'checkbox' ? checked : value
         }));
-
-        // Clear error for this field when user starts typing
         if (errors[name]) {
-            setErrors(prev => ({
-                ...prev,
-                [name]: ''
-            }));
+            setErrors(prev => ({ ...prev, [name]: '' }));
         }
     };
 
-    // Handle form submission
     const handleSubmit = async (e) => {
         e.preventDefault();
-
-        if (!validateForm()) {
-            return;
-        }
-
+        if (!validateForm()) return;
         setIsSubmitting(true);
 
         try {
@@ -84,29 +68,21 @@ const SignIn = () => {
             });
 
             if (data.success) {
-                // Success - store token and user info
                 localStorage.setItem('authToken', data.token);
                 localStorage.setItem('user', JSON.stringify(data.user));
 
-                console.log('Sign in successful!', data.user);
-
-                // Role-based redirect
                 const userRole = data.user.role;
-                console.log('USER ROLE DEFINED IN DB AS:', userRole);
-                console.log('TAB SELECTED BY USER:', selectedRole);
 
+                // ── Role-based redirect ──────────────────────────────
                 if (userRole === 'admin' || userRole === 'analyst') {
-                    // Admins and analysts can choose which dashboard view to see
                     if (selectedRole === 'user') {
-                        console.log('ADMIN/ANALYST CHOSE USER TAB -> Routing to Customer Dashboard');
                         navigate('/customer-dashboard');
+                    } else if (selectedRole === 'analyst') {
+                        navigate('/analyst/dashboard'); // ✅ analyst tab → analyst dashboard
                     } else {
-                        console.log('ADMIN/ANALYST CHOSE ADMIN/ANALYST TAB -> Routing to Admin Dashboard');
                         navigate('/admin-dashboard');
                     }
                 } else {
-                    // Normal users always go to the customer dashboard
-                    console.log('NORMAL USER -> Routing to /customer-dashboard');
                     navigate('/customer-dashboard');
                 }
             }
@@ -128,9 +104,8 @@ const SignIn = () => {
                 <div className="absolute bottom-1/4 left-1/2 w-96 h-96 bg-violet-900 rounded-full mix-blend-lighten filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
             </div>
 
-            {/* Sign in card */}
             <div className="relative w-full max-w-md">
-                {/* Role Toggle — Floating above card */}
+                {/* Role Toggle */}
                 <div className="flex justify-center mb-5">
                     <div className="inline-flex bg-white/10 backdrop-blur-md rounded-full p-1 border border-white/15 shadow-lg">
                         {ROLES.map((role) => (
@@ -150,7 +125,7 @@ const SignIn = () => {
                     </div>
                 </div>
 
-                {/* Glassmorphism card */}
+                {/* Card */}
                 <div className="backdrop-blur-xl bg-white/10 rounded-3xl shadow-2xl border border-white/20 p-8 transform transition-all duration-500 hover:scale-[1.02]">
 
                     {/* Header */}
@@ -174,7 +149,7 @@ const SignIn = () => {
 
                     {/* Form */}
                     <form onSubmit={handleSubmit} className="space-y-6">
-                        {/* Email field */}
+                        {/* Email */}
                         <div className="form-group">
                             <label htmlFor="email" className="block text-sm font-medium text-white mb-2">
                                 Email Address
@@ -191,8 +166,7 @@ const SignIn = () => {
                                     name="email"
                                     value={formData.email}
                                     onChange={handleChange}
-                                    className={`w-full pl-12 pr-4 py-3 bg-white/10 border ${errors.email ? 'border-red-400' : 'border-white/20'
-                                        } rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all duration-300 backdrop-blur-sm`}
+                                    className={`w-full pl-12 pr-4 py-3 bg-white/10 border ${errors.email ? 'border-red-400' : 'border-white/20'} rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all duration-300 backdrop-blur-sm`}
                                     placeholder="your@email.com"
                                 />
                             </div>
@@ -206,7 +180,7 @@ const SignIn = () => {
                             )}
                         </div>
 
-                        {/* Password field */}
+                        {/* Password */}
                         <div className="form-group">
                             <label htmlFor="password" className="block text-sm font-medium text-white mb-2">
                                 Password
@@ -223,8 +197,7 @@ const SignIn = () => {
                                     name="password"
                                     value={formData.password}
                                     onChange={handleChange}
-                                    className={`w-full pl-12 pr-12 py-3 bg-white/10 border ${errors.password ? 'border-red-400' : 'border-white/20'
-                                        } rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all duration-300 backdrop-blur-sm`}
+                                    className={`w-full pl-12 pr-12 py-3 bg-white/10 border ${errors.password ? 'border-red-400' : 'border-white/20'} rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all duration-300 backdrop-blur-sm`}
                                     placeholder="Enter your password"
                                 />
                                 <button
@@ -254,7 +227,7 @@ const SignIn = () => {
                             )}
                         </div>
 
-                        {/* Remember me and forgot password */}
+                        {/* Remember me */}
                         <div className="flex items-center justify-between">
                             <label className="flex items-center cursor-pointer group">
                                 <input
@@ -264,19 +237,12 @@ const SignIn = () => {
                                     onChange={handleChange}
                                     className="w-4 h-4 rounded border-white/20 bg-white/10 text-pink-500 focus:ring-2 focus:ring-pink-500 focus:ring-offset-0 cursor-pointer transition-all"
                                 />
-                                <span className="ml-2 text-sm text-white/80 group-hover:text-white transition-colors">
-                                    Remember me
-                                </span>
+                                <span className="ml-2 text-sm text-white/80 group-hover:text-white transition-colors">Remember me</span>
                             </label>
-                            <a
-                                href="#"
-                                className="text-sm text-pink-300 hover:text-pink-200 transition-colors font-medium"
-                            >
-                                Forgot password?
-                            </a>
+                            <a href="#" className="text-sm text-pink-300 hover:text-pink-200 transition-colors font-medium">Forgot password?</a>
                         </div>
 
-                        {/* Submit button */}
+                        {/* Submit */}
                         <button
                             type="submit"
                             disabled={isSubmitting}
@@ -290,13 +256,11 @@ const SignIn = () => {
                                     </svg>
                                     Signing in...
                                 </span>
-                            ) : (
-                                'Sign In'
-                            )}
+                            ) : 'Sign In'}
                         </button>
                     </form>
 
-                    {/* Divider & Social login — only for User tab */}
+                    {/* Social login — only for User tab */}
                     {selectedRole === 'user' && (
                         <>
                             <div className="relative my-8">
@@ -307,13 +271,8 @@ const SignIn = () => {
                                     <span className="px-4 bg-white/5 text-white/60 rounded-full backdrop-blur-sm">Or continue with</span>
                                 </div>
                             </div>
-
                             <div className="grid grid-cols-2 gap-4">
-                                <button
-                                    type="button"
-                                    onClick={() => authAPI.googleAuth()}
-                                    className="flex items-center justify-center px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white hover:bg-white/20 transition-all duration-300 transform hover:-translate-y-0.5 group"
-                                >
+                                <button type="button" onClick={() => authAPI.googleAuth()} className="flex items-center justify-center px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white hover:bg-white/20 transition-all duration-300 transform hover:-translate-y-0.5 group">
                                     <svg className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="currentColor">
                                         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
                                         <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
@@ -322,11 +281,7 @@ const SignIn = () => {
                                     </svg>
                                     <span className="text-sm font-medium">Google</span>
                                 </button>
-                                <button
-                                    type="button"
-                                    onClick={() => authAPI.githubAuth()}
-                                    className="flex items-center justify-center px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white hover:bg-white/20 transition-all duration-300 transform hover:-translate-y-0.5 group"
-                                >
+                                <button type="button" onClick={() => authAPI.githubAuth()} className="flex items-center justify-center px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white hover:bg-white/20 transition-all duration-300 transform hover:-translate-y-0.5 group">
                                     <svg className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24">
                                         <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
                                     </svg>
@@ -336,16 +291,12 @@ const SignIn = () => {
                         </>
                     )}
 
-                    {/* Sign up link */}
                     <p className="mt-8 text-center text-sm text-white/70">
                         Don't have an account?{' '}
-                        <Link to="/signup" className="text-pink-300 hover:text-pink-200 font-semibold transition-colors">
-                            Sign up for free
-                        </Link>
+                        <Link to="/signup" className="text-pink-300 hover:text-pink-200 font-semibold transition-colors">Sign up for free</Link>
                     </p>
                 </div>
 
-                {/* Security badge */}
                 <div className="mt-6 text-center">
                     <div className="inline-flex items-center px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full border border-white/20">
                         <svg className="w-4 h-4 text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

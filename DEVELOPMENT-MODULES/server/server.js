@@ -36,9 +36,6 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Connect to MongoDB
-connectDB();
-
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -69,16 +66,21 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔐 Sign-in endpoint: POST http://localhost:${PORT}/api/auth/signin`);
-  console.log(`📝 Sign-up endpoint: POST http://localhost:${PORT}/api/auth/signup`);
+const startServer = async () => {
+  await connectDB();
 
-  const googleConfigured = process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_ID !== 'your-google-client-id-here';
-  const githubConfigured = process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_ID !== 'your-github-client-id-here';
+  app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`Sign-in endpoint: POST http://localhost:${PORT}/api/auth/signin`);
+    console.log(`Sign-up endpoint: POST http://localhost:${PORT}/api/auth/signup`);
 
-  console.log(`🔑 Google OAuth: ${googleConfigured ? '✅ Configured' : '❌ Not configured'}`);
-  console.log(`🔑 GitHub OAuth: ${githubConfigured ? '✅ Configured' : '❌ Not configured'}`);
-});
+    const googleConfigured = process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_ID !== 'your-google-client-id-here';
+    const githubConfigured = process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_ID !== 'your-github-client-id-here';
+
+    console.log(`Google OAuth: ${googleConfigured ? 'Configured' : 'Not configured'}`);
+    console.log(`GitHub OAuth: ${githubConfigured ? 'Configured' : 'Not configured'}`);
+  });
+};
+
+startServer();

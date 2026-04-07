@@ -36,8 +36,9 @@ const OAuthSuccess = () => {
         // Decide where to send user
         let target = '/customer-dashboard';
 
-        // Admins/analysts usually go to the admin dashboard
-        if ((user.role === 'admin' || user.role === 'analyst') && loginAs !== 'user') {
+        if (user.role === 'analyst' || loginAs === 'analyst') {
+          target = '/analyst/dashboard';
+        } else if (user.role === 'admin' && loginAs !== 'user') {
           target = '/admin-dashboard';
         }
 
