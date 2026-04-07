@@ -2,21 +2,34 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Search, Filter, ArrowUpDown, Loader2, MoreVertical, CheckCircle, XCircle, AlertTriangle, UserX } from "lucide-react";
 import { transactionAPI, userAPI } from '@/services/api';
+import { useSearchParams } from 'react-router-dom';
 
 export default function TransactionMonitoring() {
     const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [searchParams, setSearchParams] = useSearchParams();
     
     // Pagination & Filtering
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState('');
+    const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || '');
     const [updatingTxnId, setUpdatingTxnId] = useState(null);
 
     // Dropdown state for simple row-level actions
     const [openDropdown, setOpenDropdown] = useState(null);
+
+    // Update URL when status filter changes
+    const handleStatusChange = (newStatus) => {
+        setStatusFilter(newStatus);
+        setPage(1);
+        if (newStatus) {
+            setSearchParams({ status: newStatus });
+        } else {
+            setSearchParams({});
+        }
+    };
 
     const fetchTransactions = async () => {
         try {
@@ -49,6 +62,14 @@ export default function TransactionMonitoring() {
 
         return () => clearTimeout(delayDebounceFn);
     }, [page, searchTerm, statusFilter]);
+
+    // Read status from URL if it changes externally
+    useEffect(() => {
+        const statusFromUrl = searchParams.get('status');
+        if (statusFromUrl !== statusFilter) {
+            setStatusFilter(statusFromUrl || '');
+        }
+    }, [searchParams]);
 
     const handleUpdateStatus = async (transactionId, newStatus) => {
         try {
@@ -113,7 +134,7 @@ export default function TransactionMonitoring() {
                     <select 
                         className="px-3 py-2 bg-white border border-slate-200 rounded-md text-sm font-medium text-slate-600 outline-none"
                         value={statusFilter}
-                        onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+                        onChange={(e) => handleStatusChange(e.target.value)}
                     >
                         <option value="">All Statuses</option>
                         <option value="pending">Pending</option>
@@ -121,7 +142,7 @@ export default function TransactionMonitoring() {
                         <option value="flagged">Flagged</option>
                         <option value="blocked">Blocked</option>
                     </select>
-                    <button onClick={() => { setSearchTerm(''); setStatusFilter(''); setPage(1); }} className="px-3 py-2 bg-white border border-slate-200 rounded-md text-sm font-medium text-slate-600 hover:bg-slate-50">
+                    <button onClick={() => { setSearchTerm(''); handleStatusChange(''); }} className="px-3 py-2 bg-white border border-slate-200 rounded-md text-sm font-medium text-slate-600 hover:bg-slate-50">
                         Clear Filters
                     </button>
                 </div>
