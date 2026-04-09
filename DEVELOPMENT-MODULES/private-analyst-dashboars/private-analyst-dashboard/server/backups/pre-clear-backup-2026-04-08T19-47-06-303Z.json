@@ -1,0 +1,246 @@
+{
+  "createdAt": "2026-04-08T19:47:06.443Z",
+  "createdBy": "analyst@fraudshield.com",
+  "mode": "mongodb",
+  "users": [
+    {
+      "_id": "69d491fb35fc2327c24826ba",
+      "email": "admin@fraudshield.com",
+      "password": "$2a$10$5w.TfN/OOLKcxGTuy9c0zOzJ.MQnTGV5UjLGURs/0dO2TWIJ6Wmla",
+      "name": "Sarah Johnson",
+      "role": "admin",
+      "accountBalance": 250000,
+      "accounts": [],
+      "status": "active",
+      "department": "Security Operations",
+      "lastLogin": null,
+      "createdAt": "2026-04-07T05:11:23.518Z",
+      "updatedAt": "2026-04-08T19:40:21.649Z",
+      "__v": 0
+    },
+    {
+      "_id": "69d491fb35fc2327c24826bc",
+      "email": "admin2@fraudshield.com",
+      "password": "$2a$10$BZ2UEb/sSkDuZlf8X8B2OuLgds7.c.aWS88VAK7iYS.qAOHpslZk.",
+      "name": "Michael Chen",
+      "role": "admin",
+      "accountBalance": 250000,
+      "accounts": [],
+      "status": "active",
+      "department": "IT Management",
+      "lastLogin": null,
+      "createdAt": "2026-04-07T05:11:23.638Z",
+      "updatedAt": "2026-04-08T19:40:21.794Z",
+      "__v": 0
+    },
+    {
+      "_id": "69d491fb35fc2327c24826be",
+      "email": "analyst@fraudshield.com",
+      "password": "$2a$10$nJOsg78dxXpOBvEft69/r.7J/QMEz1O0Fi5xRsiGO4NnHdTAIBeNe",
+      "name": "Emily Davis",
+      "role": "analyst",
+      "accountBalance": 250000,
+      "accounts": [
+        {
+          "accountId": "acc-69d491fb35fc2327c24826be",
+          "bankName": "SecureBank",
+          "accountNumber": "**** **** **** 26BE",
+          "balance": 250000,
+          "_id": "69d4ad54df8f1a051aea3f3e"
+        }
+      ],
+      "status": "active",
+      "department": "Fraud Analysis",
+      "lastLogin": null,
+      "createdAt": "2026-04-07T05:11:23.753Z",
+      "updatedAt": "2026-04-08T19:40:21.928Z",
+      "__v": 0
+    },
+    {
+      "_id": "69d491fb35fc2327c24826c0",
+      "email": "analyst2@fraudshield.com",
+      "password": "$2a$10$DWmQhzULI/FzA6mnV0CULuINJ8qbZzqcvwvOPgKrSt3LzuDx1z4ee",
+      "name": "James Wilson",
+      "role": "analyst",
+      "accountBalance": 250000,
+      "accounts": [],
+      "status": "active",
+      "department": "Risk Assessment",
+      "lastLogin": null,
+      "createdAt": "2026-04-07T05:11:23.868Z",
+      "updatedAt": "2026-04-08T19:29:14.985Z",
+      "__v": 0
+    },
+    {
+      "_id": "69d491fb35fc2327c24826c2",
+      "email": "user@fraudshield.com",
+      "password": "$2a$10$RcMNgwHJJ5DbRTFRY5G.3eg1N3d054akkF7VejfqHAvnnJ.twQVGy",
+      "name": "John Smith",
+      "role": "user",
+      "accountBalance": 250000,
+      "accounts": [
+        {
+          "accountId": "acc-69d491fb35fc2327c24826c2",
+          "bankName": "SecureBank",
+          "accountNumber": "**** **** **** 26C2",
+          "balance": 250000,
+          "_id": "69d6aabe9f78816c5bd36790"
+        }
+      ],
+      "status": "active",
+      "department": "General",
+      "lastLogin": null,
+      "createdAt": "2026-04-07T05:11:23.987Z",
+      "updatedAt": "2026-04-08T19:29:15.109Z",
+      "__v": 0
+    },
+    {
+      "_id": "69d491fc35fc2327c24826c4",
+      "email": "user2@fraudshield.com",
+      "password": "$2a$10$TWyfzUn6BsyJCVI8Zs9DzO1s6IY5fcCKkpVBfuq0USpJrrxew/uYC",
+      "name": "Lisa Anderson",
+      "role": "user",
+      "accountBalance": 250000,
+      "accounts": [],
+      "status": "active",
+      "department": "General",
+      "lastLogin": null,
+      "createdAt": "2026-04-07T05:11:24.101Z",
+      "updatedAt": "2026-04-08T19:29:15.234Z",
+      "__v": 0
+    },
+    {
+      "_id": "69d491fc35fc2327c24826c6",
+      "email": "user3@fraudshield.com",
+      "password": "$2a$10$JLXTGedZ8Wpi0vrBUASTw.iiiB6KdTKn872/LeBi/rgHX8wlvKw7a",
+      "name": "David Brown",
+      "role": "user",
+      "accountBalance": 250000,
+      "accounts": [],
+      "status": "active",
+      "department": "General",
+      "lastLogin": null,
+      "createdAt": "2026-04-07T05:11:24.216Z",
+      "updatedAt": "2026-04-08T19:07:51.667Z",
+      "__v": 0
+    },
+    {
+      "_id": "69d49439746ac36ba6d72dbe",
+      "email": "sachinpatel1097819@gmail.com",
+      "password": "$2a$10$TvSaJWxcABNcR0nYRl0.9OFzq5WpA7iPL6o.ONoXP9kjF9aDuBJ6u",
+      "name": "SACHIN PATEL",
+      "role": "user",
+      "accountBalance": 250000,
+      "accounts": [
+        {
+          "accountId": "69d4945c746ac36ba6d72dde",
+          "bankName": "Indian",
+          "accountNumber": "**** **** **** 2544",
+          "balance": 250000,
+          "_id": "69d4945c746ac36ba6d72ddf"
+        }
+      ],
+      "status": "active",
+      "department": "General",
+      "lastLogin": null,
+      "createdAt": "2026-04-07T05:20:57.862Z",
+      "updatedAt": "2026-04-08T19:07:51.775Z",
+      "__v": 0
+    }
+  ],
+  "transactions": [
+    {
+      "_id": "69d6af43cb9d38bba973dba5",
+      "user": "69d491fb35fc2327c24826be",
+      "accountId": "acc-69d491fb35fc2327c24826be",
+      "amount": 1000,
+      "transactionType": "transfer",
+      "status": "blocked",
+      "recipient": "shashank mishra",
+      "disputeStatus": "none",
+      "description": "",
+      "location": "gwalior",
+      "riskScore": 0.99,
+      "riskScorePercent": 99,
+      "riskLevel": "CRITICAL_RISK",
+      "reasonCodes": [
+        "AMOUNT_NORMAL",
+        "LOCATION_FOREIGN",
+        "TIME_NIGHT_HIGH_AMOUNT",
+        "FREQUENCY_NORMAL",
+        "MERCHANT_NEW",
+        "BEHAVIOR_NORMAL",
+        "TRANSFER_FLOW"
+      ],
+      "triggeredRules": [],
+      "createdAt": "2026-04-08T19:40:51.649Z",
+      "__v": 0
+    },
+    {
+      "_id": "69d6af9e3a8cd323ec34bb9e",
+      "user": "69d491fb35fc2327c24826be",
+      "accountId": "acc-69d491fb35fc2327c24826be",
+      "amount": 12000,
+      "transactionType": "transfer",
+      "status": "blocked",
+      "recipient": "ahan",
+      "disputeStatus": "none",
+      "description": "",
+      "location": "RU",
+      "riskScore": 0.99,
+      "riskScorePercent": 99,
+      "riskLevel": "CRITICAL_RISK",
+      "reasonCodes": [
+        "AMOUNT_VERY_HIGH",
+        "LOCATION_SUSPICIOUS",
+        "TIME_NIGHT_HIGH_AMOUNT",
+        "FREQUENCY_RAPID",
+        "MERCHANT_NEW",
+        "BEHAVIOR_ABNORMAL",
+        "HISTORY_KNOWN_FRAUD",
+        "TRANSFER_FLOW"
+      ],
+      "triggeredRules": [],
+      "createdAt": "2026-04-08T19:42:22.249Z",
+      "__v": 0
+    }
+  ],
+  "notifications": [
+    {
+      "_id": "69d6af43cb9d38bba973dba7",
+      "user": "69d491fb35fc2327c24826be",
+      "title": "Transaction blocked",
+      "message": "Your payment to shashank mishra for Rs. 1,000 was blocked by fraud engine.",
+      "type": "error",
+      "relatedTransaction": "69d6af43cb9d38bba973dba5",
+      "read": false,
+      "createdAt": "2026-04-08T19:40:51.812Z",
+      "__v": 0
+    },
+    {
+      "_id": "69d6af9e3a8cd323ec34bba0",
+      "user": "69d491fb35fc2327c24826be",
+      "title": "Transaction blocked",
+      "message": "Your payment to ahan for Rs. 12,000 was blocked by fraud engine.",
+      "type": "error",
+      "relatedTransaction": "69d6af9e3a8cd323ec34bb9e",
+      "read": false,
+      "createdAt": "2026-04-08T19:42:22.456Z",
+      "__v": 0
+    }
+  ],
+  "rules": [],
+  "models": [
+    {
+      "id": "neural-network-v1",
+      "name": "Neural Network",
+      "type": "Deep Learning Fraud Detector",
+      "status": "ready",
+      "accuracy": 96.7,
+      "version": "v1.0",
+      "lastTrainedAt": null,
+      "progress": 0,
+      "coverage": 91
+    }
+  ]
+}
