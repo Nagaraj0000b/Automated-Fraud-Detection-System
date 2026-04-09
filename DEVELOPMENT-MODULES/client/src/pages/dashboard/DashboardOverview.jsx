@@ -1,161 +1,142 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Activity, CreditCard, ShieldAlert, Users, Loader2 } from "lucide-react";
-import { dashboardAPI } from '@/services/api';
+import { Loader2 } from "lucide-react";
+import { dashboardAPI, alertAPI, websocketService } from '@/services/api';
+
+const riskColors = {
+  Critical: 'bg-red-100 text-red-700 border border-red-200',
+  High: 'bg-orange-100 text-orange-700 border border-orange-200',
+  Medium: 'bg-yellow-100 text-yellow-700 border border-yellow-200',
+  Low: 'bg-green-100 text-green-700 border border-green-200',
+};
 
 export default function DashboardOverview() {
-    const [stats, setStats] = useState(null);
-    const [recentUsers, setRecentUsers] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+  const [stats, setStats] = useState(null);
+  const [alertStats, setAlertStats] = useState(null);
+  const [recentAlerts, setRecentAlerts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [wsConnected, setWsConnected] = useState(false);
 
-    useEffect(() => {
-        fetchDashboardData();
-    }, []);
+  const fetchDashboardData = useCallback(async () => {
+    try {
+      setLoading(true);
 
-    const fetchDashboardData = async () => {
-        try {
-            setLoading(true);
-            const [statsRes, usersRes] = await Promise.all([
-                dashboardAPI.getStats(),
-                dashboardAPI.getRecentUsers()
-            ]);
-            setStats(statsRes.stats);
-            setRecentUsers(usersRes.users);
-            setError(null);
-        } catch (err) {
-            setError(err.response?.data?.message || 'Failed to load dashboard data');
-        } finally {
-            setLoading(false);
-        }
+      const [statsRes, alertStatsRes, recentAlertsRes] = await Promise.all([
+        dashboardAPI.getStats(),
+        alertAPI.getStats(),
+        alertAPI.getRecent(),
+      ]);
+
+      setStats(statsRes.stats || null);
+      setAlertStats(alertStatsRes.stats || null);
+      setRecentAlerts(recentAlertsRes.alerts || []);
+
+      setError(null);
+    } catch (err) {
+      console.error(err);
+      setError(err.response?.data?.message || 'Failed to load dashboard data');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchDashboardData();
+    websocketService.connect();
+
+    const handleAlert = (data) => {
+      setRecentAlerts((prev) => [data.alert, ...prev.slice(0, 19)]);
     };
 
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center h-64">
-                <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-                <span className="ml-2 text-slate-500">Loading dashboard...</span>
-            </div>
-        );
-    }
+    websocketService.on('fraud_alert', handleAlert);
 
-    if (error) {
-        return (
-            <div className="p-6 bg-red-50 border border-red-200 rounded-lg text-red-700">
-                <p className="font-medium">Error loading dashboard</p>
-                <p className="text-sm mt-1">{error}</p>
-                <button onClick={fetchDashboardData} className="mt-3 px-4 py-2 bg-red-100 rounded text-sm font-medium hover:bg-red-200">
-                    Retry
-                </button>
-            </div>
-        );
-    }
+    const wsCheck = setInterval(() => {
+      setWsConnected(websocketService.ws?.readyState === WebSocket.OPEN);
+    }, 2000);
 
-    const statCards = [
-        {
-            title: "Total Transactions (24h)",
-            value: stats?.transactions?.total24h?.toLocaleString() || '0',
-            icon: <CreditCard className="h-4 w-4 text-slate-500" />,
-            trend: stats?.transactions?.note || 'Pending setup'
-        },
-        {
-            title: "Flagged Frauds",
-            value: stats?.transactions?.flaggedFrauds?.toLocaleString() || '0',
-            icon: <ShieldAlert className="h-4 w-4 text-red-500" />,
-            trend: stats?.transactions?.note || 'Pending setup'
-        },
-        {
-            title: "Active AI Models",
-            value: stats?.models?.activeModels?.toString() || '0',
-            icon: <Activity className="h-4 w-4 text-blue-500" />,
-            trend: stats?.models?.note || 'Pending setup'
-        },
-        {
-            title: "System Users",
-            value: stats?.users?.total?.toString() || '0',
-            icon: <Users className="h-4 w-4 text-slate-500" />,
-            trend: `${stats?.users?.active || 0} active, ${stats?.users?.recentSignups || 0} new this week`
-        },
-    ];
+    return () => {
+      websocketService.off('fraud_alert', handleAlert);
+      clearInterval(wsCheck);
+    };
+  }, [fetchDashboardData]);
 
+  if (loading) {
     return (
-        <div className="space-y-6">
-            <div>
-                <h2 className="text-2xl font-bold tracking-tight text-slate-900">Dashboard Overview</h2>
-                <p className="text-slate-500">Welcome back. Here is what's happening today.</p>
-            </div>
-
-            {/* Stats Grid */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                {statCards.map((stat, i) => (
-                    <Card key={i} className="hover:shadow-md transition-shadow">
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium text-slate-600">
-                                {stat.title}
-                            </CardTitle>
-                            {stat.icon}
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold text-slate-900">{stat.value}</div>
-                            <p className="text-xs text-slate-500 mt-1">{stat.trend}</p>
-                        </CardContent>
-                    </Card>
-                ))}
-            </div>
-
-            {/* Main Content Area */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-                {/* Users by Role */}
-                <Card className="col-span-4 min-h-[400px]">
-                    <CardHeader>
-                        <CardTitle>Users by Role</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-4">
-                            {stats?.users?.byRole?.map((item, i) => (
-                                <div key={i} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
-                                    <span className="text-sm font-medium text-slate-900 capitalize">{item._id}</span>
-                                    <span className="text-sm font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full">{item.count}</span>
-                                </div>
-                            ))}
-                            {(!stats?.users?.byRole || stats.users.byRole.length === 0) && (
-                                <p className="text-slate-400 text-center py-8">No role data available</p>
-                            )}
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* Recent Users */}
-                <Card className="col-span-3 min-h-[400px]">
-                    <CardHeader>
-                        <CardTitle>Recent Signups</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-4">
-                            {recentUsers.map((user) => (
-                                <div key={user._id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
-                                    <div className="flex items-center space-x-3">
-                                        <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-bold">
-                                            {user.name?.charAt(0)?.toUpperCase() || '?'}
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-medium text-slate-900">{user.name}</p>
-                                            <p className="text-xs text-slate-500">{user.email}</p>
-                                        </div>
-                                    </div>
-                                    <span className={`text-xs font-medium px-2 py-1 rounded ${user.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500'
-                                        }`}>
-                                        {user.role}
-                                    </span>
-                                </div>
-                            ))}
-                            {recentUsers.length === 0 && (
-                                <p className="text-slate-400 text-center py-8">No recent users</p>
-                            )}
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-        </div>
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+        <span className="ml-2 text-slate-500">Loading dashboard...</span>
+      </div>
     );
+  }
+
+  if (error) {
+    return <div className="text-red-500 p-4">{error}</div>;
+  }
+
+  return (
+    <div className="space-y-6">
+
+      {/* HEADER */}
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold">Dashboard Overview</h2>
+        <div className={`px-3 py-1 rounded-full text-xs ${wsConnected ? 'bg-green-100 text-green-700' : 'bg-gray-200'}`}>
+          {wsConnected ? 'LIVE' : 'Connecting...'}
+        </div>
+      </div>
+
+      {/* STATS */}
+      <div className="grid grid-cols-4 gap-4">
+        <Card>
+          <CardContent>
+            <p>Fraud Detected</p>
+            <h2 className="text-xl font-bold">{alertStats?.totalFraudDetected || 0}</h2>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent>
+            <p>Total Transactions</p>
+            <h2>{stats?.transactions?.total24h || 0}</h2>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent>
+            <p>Avg Risk</p>
+            <h2>{alertStats?.avgRiskScore || 0}</h2>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent>
+            <p>Users</p>
+            <h2>{stats?.users?.total || 0}</h2>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ALERTS */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Alerts</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {recentAlerts.length > 0 ? (
+            recentAlerts.map((a) => (
+              <div key={a._id} className="flex justify-between border-b py-2 text-sm">
+                <span>{a.alertId}</span>
+                <span>{a.user?.email}</span>
+                <span>₹{a.amount}</span>
+                <span className={riskColors[a.riskLevel]}>{a.riskLevel}</span>
+              </div>
+            ))
+          ) : (
+            <p>No alerts</p>
+          )}
+        </CardContent>
+      </Card>
+
+    </div>
+  );
 }
