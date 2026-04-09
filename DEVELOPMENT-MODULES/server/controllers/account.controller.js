@@ -59,7 +59,7 @@ exports.addAccount = async (req, res) => {
 
     const newAccount = {
       accountId: newAccountId,
-      bankName: bankName && bankName.trim() ? bankName.trim() : 'New Bank Account',
+      bankName: bankName && bankName.trim() ? bankName.trim() : 'SecureBank',
       accountNumber: `**** **** **** ${randomLast4}`,
       balance: 1000, // default starting balance per new account
     };

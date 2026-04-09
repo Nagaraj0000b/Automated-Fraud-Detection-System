@@ -9,7 +9,6 @@ import MakePayment from './pages/MakePayment';
 import MainLayout from './components/layout/MainLayout';
 import AccountSuspended from './pages/AccountSuspended';
 import Maintenance from './pages/Maintenance';
-import AnalystDashboard from './pages/AnalystDashboard';
 
 import DashboardOverview from './pages/dashboard/DashboardOverview';
 import TransactionMonitoring from './pages/dashboard/TransactionMonitoring';
@@ -25,20 +24,24 @@ function App() {
   return (
     <Router>
       <Routes>
+        {/* Public / Auth Routes */}
         <Route path="/" element={<Navigate to="/signin" replace />} />
         <Route path="/signin" element={<SignIn />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/oauth-success" element={<OAuthSuccess />} />
         <Route path="/suspended" element={<AccountSuspended />} />
         <Route path="/maintenance" element={<Maintenance />} />
-
+        {/* Legacy analyst dashboard */}
         <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/analyst/dashboard" element={<AnalystDashboard />} />
 
+        {/* Customer dashboard (used by normal users) */}
         <Route path="/customer-dashboard" element={<CustomerDashboard />} />
         <Route path="/make-payment" element={<MakePayment />} />
+
+        {/* Optional separate user dashboard */}
         <Route path="/user-dashboard" element={<UserDashboard />} />
 
+        {/* Admin / Analyst advanced dashboard area wrapped in MainLayout */}
         <Route path="/admin-dashboard" element={<MainLayout />}>
           <Route index element={<DashboardOverview />} />
           <Route path="transactions" element={<TransactionMonitoring />} />

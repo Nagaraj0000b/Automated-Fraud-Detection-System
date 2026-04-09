@@ -1,7 +1,6 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const Setting = require('../models/Setting');
-const connectDB = require('../config/database');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key';
 
@@ -56,14 +55,6 @@ exports.verifyToken = (req, res, next) => {
     }
 
     try {
-      if (!connectDB.isConnected()) {
-        req.user = {
-          ...decoded,
-          status: decoded.status || 'active'
-        };
-        return next();
-      }
-
       // Fetch the latest user data to check status
       const user = await User.findById(decoded.userId || decoded.id);
       

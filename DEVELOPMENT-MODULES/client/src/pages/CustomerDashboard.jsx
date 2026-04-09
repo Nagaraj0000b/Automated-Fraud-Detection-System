@@ -278,7 +278,7 @@ const CustomerDashboard = () => {
                   <button
                     type="button"
                     onClick={() => setShowBankList((prev) => !prev)}
-                    className="text-xs font-medium text-cyan-300 hover:text-cyan-200 py-2 px-4 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 transition-colors border border-cyan-500/30 flex items-center gap-1"
+                    className="text-xs font-medium text-cyan-300 hover:text-cyan-200 underline flex items-center gap-1"
                   >
                     <span>Change bank</span>
                     <span className="text-[10px] opacity-80">▼</span>
@@ -307,13 +307,13 @@ const CustomerDashboard = () => {
                 <button
                   type="button"
                   onClick={() => navigate('/make-payment')}
-                  className="text-xs font-medium text-white bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 rounded-lg px-4 py-2 shadow-md shadow-emerald-900/40"
+                  className="text-xs font-medium text-emerald-300 hover:text-emerald-200 underline"
                 >
                   Make Payment
                 </button>
                 <button
                   onClick={openAddAccountModal}
-                  className="text-xs font-medium text-emerald-300 hover:text-emerald-200 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 rounded-lg px-3 py-2 transition-colors flex items-center gap-1"
+                  className="text-xs font-medium text-emerald-300 hover:text-emerald-200 underline flex items-center gap-1"
                 >
                   <span className="text-base leading-none">＋</span>
                   <span>Add Account</span>

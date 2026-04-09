@@ -2,48 +2,17 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const { createAuditLog } = require('./audit.controller');
-const connectDB = require('../config/database');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key';
-const DEMO_USERS = [
-  {
-    id: 'demo-analyst-1',
-    email: 'analyst@fraudshield.com',
-    password: 'Analyst@123',
-    name: 'Emily Davis',
-    role: 'analyst',
-    department: 'Fraud Analysis',
-    status: 'active'
-  },
-  {
-    id: 'demo-analyst-2',
-    email: 'analyst2@fraudshield.com',
-    password: 'Analyst@456',
-    name: 'James Wilson',
-    role: 'analyst',
-    department: 'Risk Assessment',
-    status: 'active'
-  },
-  {
-    id: 'demo-admin-1',
-    email: 'admin@fraudshield.com',
-    password: 'Admin@123',
-    name: 'Sarah Johnson',
-    role: 'admin',
-    department: 'Security Operations',
-    status: 'active'
-  }
-];
 
 // Helper function to generate JWT
 const generateToken = (user, expiresIn = '24h') => {
   return jwt.sign(
     {
-      userId: user._id || user.id,
+      userId: user._id,
       email: user.email,
       name: user.name,
-      role: user.role,
-      status: user.status || 'active'
+      role: user.role
     },
     JWT_SECRET,
     { expiresIn }
@@ -159,36 +128,6 @@ exports.signin = async (req, res) => {
       });
     }
 
-    if (!connectDB.isConnected()) {
-      const demoUser = DEMO_USERS.find(
-        (user) => user.email === email.toLowerCase() && user.password === password
-      );
-
-      if (!demoUser) {
-        return res.status(401).json({
-          success: false,
-          message: 'Database unavailable. Use demo analyst/admin credentials in temporary offline mode.'
-        });
-      }
-
-      const tokenExpiration = rememberMe ? '7d' : '24h';
-      const token = generateToken(demoUser, tokenExpiration);
-
-      return res.status(200).json({
-        success: true,
-        message: 'Sign in successful (offline demo mode)',
-        token,
-        user: {
-          id: demoUser.id,
-          email: demoUser.email,
-          name: demoUser.name,
-          role: demoUser.role,
-          department: demoUser.department,
-          status: demoUser.status
-        }
-      });
-    }
-
     // Find user by email
     const user = await User.findOne({ email: email.toLowerCase() });
 
@@ -255,22 +194,6 @@ exports.getMe = async (req, res) => {
   } catch (error) {
     console.error('Get user error:', error);
     res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
-  }
-};
-
-// Logout controller
-exports.logout = async (req, res) => {
-  try {
-    return res.status(200).json({
-      success: true,
-      message: 'Signed out successfully'
-    });
-  } catch (error) {
-    console.error('Logout error:', error);
-    return res.status(500).json({
       success: false,
       message: 'Internal server error'
     });

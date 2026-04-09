@@ -22,7 +22,7 @@ export default function AccountSuspended() {
 
                 <div className="space-y-3">
                     <button 
-                        onClick={() => window.location.href = "mailto:support@fraudguard.ai?subject=Account%20Suspension%20Appeal"}
+                        onClick={() => window.location.href = "mailto:ritik.yadav23b@iiitg.a.cin?subject=Account%20Suspension%20Appeal"}
                         className="w-full py-3 px-4 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors"
                     >
                         Contact Support

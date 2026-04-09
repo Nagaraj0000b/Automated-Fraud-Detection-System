@@ -13,9 +13,6 @@ router.post('/signin', authController.signin);
 // Get current user (protected route)
 router.get('/me', verifyToken, authController.getMe);
 
-// Logout route
-router.post('/logout', authController.logout);
-
 const isGoogleConfigured =
   process.env.GOOGLE_CLIENT_ID &&
   process.env.GOOGLE_CLIENT_ID !== 'your-google-client-id-here';
