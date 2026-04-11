@@ -2,14 +2,13 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import SignIn from './pages/SignIn';
 import SignUp from './pages/SignUp';
 import OAuthSuccess from './pages/OAuthSuccess';
-import Dashboard from './pages/Dashboard';
 import CustomerDashboard from './pages/CustomerDashboard';
-import UserDashboard from './pages/UserDashboard';
 import MakePayment from './pages/MakePayment';
 import MainLayout from './components/layout/MainLayout';
 import AccountSuspended from './pages/AccountSuspended';
 import Maintenance from './pages/Maintenance';
 import AnalystDashboard from './pages/AnalystDashboardRealV2';
+import { getHomePathForUser, getStoredUser } from './lib/auth';
 
 import DashboardOverview from './pages/dashboard/DashboardOverviewReal';
 import TransactionMonitoring from './pages/dashboard/TransactionMonitoring';
@@ -21,23 +20,33 @@ import ComplianceLogs from './pages/dashboard/ComplianceLogs';
 import UserManagement from './pages/dashboard/UserManagement';
 import SystemSettings from './pages/dashboard/SystemSettings';
 
+function RoleHomeRedirect() {
+  const token = localStorage.getItem('authToken');
+
+  if (!token) {
+    return <Navigate to="/signin" replace />;
+  }
+
+  return <Navigate to={getHomePathForUser(getStoredUser())} replace />;
+}
+
 function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Navigate to="/signin" replace />} />
+        <Route path="/" element={<RoleHomeRedirect />} />
         <Route path="/signin" element={<SignIn />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/oauth-success" element={<OAuthSuccess />} />
         <Route path="/suspended" element={<AccountSuspended />} />
         <Route path="/maintenance" element={<Maintenance />} />
 
-        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/dashboard" element={<RoleHomeRedirect />} />
         <Route path="/analyst/dashboard" element={<AnalystDashboard />} />
 
         <Route path="/customer-dashboard" element={<CustomerDashboard />} />
         <Route path="/make-payment" element={<MakePayment />} />
-        <Route path="/user-dashboard" element={<UserDashboard />} />
+        <Route path="/user-dashboard" element={<RoleHomeRedirect />} />
 
         <Route path="/admin-dashboard" element={<MainLayout />}>
           <Route index element={<DashboardOverview />} />

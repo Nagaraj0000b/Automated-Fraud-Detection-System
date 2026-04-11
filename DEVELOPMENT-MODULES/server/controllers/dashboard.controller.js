@@ -1,84 +1,162 @@
 const User = require('../models/User');
+const Transaction = require('../models/Transaction');
+const RiskRule = require('../models/RiskRule');
 
-// GET /api/dashboard/stats — Aggregate overview stats
-exports.getStats = async (req, res) => {
-    try {
-        // Total users
-        const totalUsers = await User.countDocuments();
+const DAY_MS = 24 * 60 * 60 * 1000;
+const HIGH_RISK_THRESHOLD = 0.5;
 
-        // Users by role
-        const usersByRole = await User.aggregate([
-            { $group: { _id: '$role', count: { $sum: 1 } } }
-        ]);
+const percentChange = (current, previous) => {
+  if (!previous) {
+    return current > 0 ? 100 : 0;
+  }
 
-        // Users by status
-        const usersByStatus = await User.aggregate([
-            { $group: { _id: '$status', count: { $sum: 1 } } }
-        ]);
-
-        // Active users (status === 'active')
-        const activeUsers = await User.countDocuments({ status: 'active' });
-
-        // Admin count
-        const adminCount = await User.countDocuments({ role: 'admin' });
-
-        // Recently created users (last 7 days)
-        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-        const recentUsers = await User.countDocuments({ createdAt: { $gte: sevenDaysAgo } });
-
-        // Placeholder stats for future modules (transactions, models, etc.)
-        // These will be replaced with real data once those models are built
-        const stats = {
-            users: {
-                total: totalUsers,
-                active: activeUsers,
-                admins: adminCount,
-                recentSignups: recentUsers,
-                byRole: usersByRole,
-                byStatus: usersByStatus
-            },
-            transactions: {
-                total24h: 0,
-                flaggedFrauds: 0,
-                approvalRate: '0%',
-                note: 'Transaction model not yet built'
-            },
-            models: {
-                activeModels: 0,
-                avgAccuracy: '0%',
-                note: 'AI Model module not yet built'
-            },
-            riskRules: {
-                totalRules: 0,
-                activeRules: 0,
-                note: 'Risk Rules module not yet built'
-            }
-        };
-
-        res.status(200).json({
-            success: true,
-            stats
-        });
-    } catch (error) {
-        console.error('Dashboard stats error:', error);
-        res.status(500).json({ success: false, message: 'Internal server error' });
-    }
+  return Number((((current - previous) / previous) * 100).toFixed(1));
 };
 
-// GET /api/dashboard/recent-users — Get recently joined users for the dashboard
-exports.getRecentUsers = async (req, res) => {
-    try {
-        const recentUsers = await User.find()
-            .select('-password')
-            .sort({ createdAt: -1 })
-            .limit(5);
+exports.getStats = async (req, res) => {
+  try {
+    const now = new Date();
+    const oneDayAgo = new Date(now.getTime() - DAY_MS);
+    const twoDaysAgo = new Date(now.getTime() - 2 * DAY_MS);
+    const sevenDaysAgo = new Date(now.getTime() - 7 * DAY_MS);
+    const fourteenDaysAgo = new Date(now.getTime() - 14 * DAY_MS);
 
-        res.status(200).json({
-            success: true,
-            users: recentUsers
-        });
-    } catch (error) {
-        console.error('Recent users error:', error);
-        res.status(500).json({ success: false, message: 'Internal server error' });
-    }
+    const [
+      totalUsers,
+      activeUsers,
+      adminCount,
+      analystCount,
+      recentUsers,
+      usersByRole,
+      usersByStatus,
+      totalTransactions,
+      totalTransactions24h,
+      previousTransactions24h,
+      totalFlagged,
+      totalBlocked,
+      flagged24h,
+      previousFlagged24h,
+      highRiskAlerts,
+      previousHighRiskAlerts,
+      allTransactions,
+      totalRules,
+      activeRules,
+    ] = await Promise.all([
+      User.countDocuments(),
+      User.countDocuments({ status: 'active' }),
+      User.countDocuments({ role: 'admin' }),
+      User.countDocuments({ role: 'analyst' }),
+      User.countDocuments({ createdAt: { $gte: sevenDaysAgo } }),
+      User.aggregate([{ $group: { _id: '$role', count: { $sum: 1 } } }]),
+      User.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
+      Transaction.countDocuments(),
+      Transaction.countDocuments({ createdAt: { $gte: oneDayAgo } }),
+      Transaction.countDocuments({ createdAt: { $gte: twoDaysAgo, $lt: oneDayAgo } }),
+      Transaction.countDocuments({ status: 'flagged' }),
+      Transaction.countDocuments({ status: 'blocked' }),
+      Transaction.countDocuments({
+        createdAt: { $gte: oneDayAgo },
+        status: { $in: ['flagged', 'blocked'] },
+      }),
+      Transaction.countDocuments({
+        createdAt: { $gte: twoDaysAgo, $lt: oneDayAgo },
+        status: { $in: ['flagged', 'blocked'] },
+      }),
+      Transaction.countDocuments({
+        createdAt: { $gte: sevenDaysAgo },
+        $or: [
+          { status: { $in: ['flagged', 'blocked'] } },
+          { riskScore: { $gte: HIGH_RISK_THRESHOLD } },
+        ],
+      }),
+      Transaction.countDocuments({
+        createdAt: { $gte: fourteenDaysAgo, $lt: sevenDaysAgo },
+        $or: [
+          { status: { $in: ['flagged', 'blocked'] } },
+          { riskScore: { $gte: HIGH_RISK_THRESHOLD } },
+        ],
+      }),
+      Transaction.find().select('amount riskScore status createdAt'),
+      RiskRule.countDocuments(),
+      RiskRule.countDocuments({ isActive: true }),
+    ]);
+
+    const approvedTransactions = allTransactions.filter(
+      (transaction) => transaction.status === 'approved'
+    ).length;
+    const totalAmount24h = allTransactions
+      .filter((transaction) => transaction.createdAt >= oneDayAgo)
+      .reduce((sum, transaction) => sum + Number(transaction.amount || 0), 0);
+    const avgRiskScore = allTransactions.length
+      ? Number(
+          (
+            allTransactions.reduce(
+              (sum, transaction) => sum + Number(transaction.riskScore || 0),
+              0
+            ) / allTransactions.length
+          ).toFixed(4)
+        )
+      : 0;
+
+    res.status(200).json({
+      success: true,
+      stats: {
+        users: {
+          total: totalUsers,
+          active: activeUsers,
+          admins: adminCount,
+          analysts: analystCount,
+          recentSignups: recentUsers,
+          byRole: usersByRole,
+          byStatus: usersByStatus,
+        },
+        transactions: {
+          total: totalTransactions,
+          total24h: totalTransactions24h,
+          totalAmount24h: Number(totalAmount24h.toFixed(2)),
+          flaggedFrauds: totalFlagged,
+          blockedFrauds: totalBlocked,
+          flagged24h,
+          approvalRate: totalTransactions
+            ? Number(((approvedTransactions / totalTransactions) * 100).toFixed(1))
+            : 0,
+          avgRiskScore,
+          dayChange: percentChange(totalTransactions24h, previousTransactions24h),
+          fraudChange: percentChange(flagged24h, previousFlagged24h),
+        },
+        alerts: {
+          totalHighRisk: highRiskAlerts,
+          weekChange: percentChange(highRiskAlerts, previousHighRiskAlerts),
+        },
+        models: {
+          activeModels: null,
+          avgAccuracy: null,
+        },
+        riskRules: {
+          totalRules,
+          activeRules,
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Dashboard stats error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+exports.getRecentUsers = async (req, res) => {
+  try {
+    const recentUsers = await User.find()
+      .select('-password')
+      .sort({ createdAt: -1 })
+      .limit(5);
+
+    res.status(200).json({
+      success: true,
+      users: recentUsers,
+    });
+  } catch (error) {
+    console.error('Recent users error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
 };

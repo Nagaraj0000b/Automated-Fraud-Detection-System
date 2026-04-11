@@ -2,6 +2,7 @@ import React from 'react';
 import { Outlet, Navigate, useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import { LogOut } from 'lucide-react';
+import { getHomePathForUser } from '../../lib/auth';
 
 const MainLayout = () => {
     const navigate = useNavigate();
@@ -24,8 +25,8 @@ const MainLayout = () => {
     }
 
     if (user.role !== 'admin') {
-        console.log(`[MainLayout] User role is '${user.role}', redirecting to /user-dashboard`);
-        return <Navigate to="/user-dashboard" replace />;
+        console.log(`[MainLayout] User role is '${user.role}', redirecting to role home`);
+        return <Navigate to={getHomePathForUser(user)} replace />;
     }
 
     console.log('[MainLayout] Access GRANTED to Admin dashboard');

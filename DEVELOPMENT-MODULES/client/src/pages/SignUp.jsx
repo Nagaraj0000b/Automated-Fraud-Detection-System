@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { authAPI } from '../services/api';
+import { getHomePathForRole } from '../lib/auth';
 
 const SignUp = () => {
   const navigate = useNavigate();
@@ -104,12 +105,7 @@ const SignUp = () => {
           `Welcome, ${data.user.name}!\n\nYour account has been created successfully.`
         );
 
-        // Redirect based on role
-        if (data.user.role === 'admin' || data.user.role === 'analyst') {
-          navigate('/dashboard');
-        } else {
-          navigate('/customer-dashboard');
-        }
+        navigate(getHomePathForRole(data.user.role));
       }
     } catch (error) {
       console.error('Sign up error:', error);
@@ -518,7 +514,7 @@ const SignUp = () => {
           <div className="grid grid-cols-2 gap-4">
             <button
               type="button"
-              onClick={() => authAPI.googleAuth()}
+              onClick={() => authAPI.googleAuth('user')}
               className="flex items-center justify-center px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white hover:bg-white/20 transition-all duration-300 transform hover:-translate-y-0.5 group"
             >
               <svg
@@ -547,7 +543,7 @@ const SignUp = () => {
             </button>
             <button
               type="button"
-              onClick={() => authAPI.githubAuth()}
+              onClick={() => authAPI.githubAuth('user')}
               className="flex items-center justify-center px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white hover:bg-white/20 transition-all duration-300 transform hover:-translate-y-0.5 group"
             >
               <svg

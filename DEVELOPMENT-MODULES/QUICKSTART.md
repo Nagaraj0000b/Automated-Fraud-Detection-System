@@ -1,6 +1,6 @@
 # Quick Start (Development Modules)
 
-Use this when you want the auth module running fast.
+Use this when you want the auth and dashboard module running fast.
 
 ## 1. Install
 
@@ -25,7 +25,7 @@ Minimum values:
 PORT=5000
 CLIENT_URL=http://localhost:3000
 CALLBACK_URL=http://localhost:5000
-MONGODB_URI=mongodb://localhost:27017/fraud-detection-auth
+MONGODB_URI=mongodb://127.0.0.1:27017/fraud-detection-auth
 JWT_SECRET=change-this
 SESSION_SECRET=change-this
 ```
@@ -33,13 +33,14 @@ SESSION_SECRET=change-this
 `client/.env`
 ```env
 VITE_API_URL=http://localhost:5000/api
+VITE_WS_URL=
 ```
 
 ## 3. Start MongoDB
 
-Use local MongoDB or Atlas. If local, ensure it is running before starting the server.
+Use local MongoDB or Atlas. If local, make sure it is running before starting the server.
 
-## 4. Optional: Seed Demo Users
+## 4. Seed Demo Users
 
 From `DEVELOPMENT-MODULES/`:
 
@@ -47,9 +48,12 @@ From `DEVELOPMENT-MODULES/`:
 npm run seed
 ```
 
-Creates:
-- `admin@fraud-detection.com` / `admin123`
-- `user@fraud-detection.com` / `password123`
+Common demo accounts:
+- `admin@fraudshield.com` / `Admin@123`
+- `analyst@fraudshield.com` / `Analyst@123`
+- `user@fraudshield.com` / `User@123`
+
+More accounts are listed in `TEST-CREDENTIALS.md`.
 
 ## 5. Run App
 
@@ -62,17 +66,21 @@ npm run dev
 App URLs:
 - Frontend: `http://localhost:3000`
 - Backend: `http://localhost:5000`
-- Health check: `http://localhost:5000/api/health`
+- Health: `http://localhost:5000/api/health`
 
 ## 6. Verify Flow
 
 1. Open `http://localhost:3000`
-2. Create an account from `/signup` or sign in at `/signin`
-3. Confirm redirect to `/dashboard`
+2. Go to `/signin`
+3. Pick the matching role tab
+4. Confirm redirect:
+   - Admin -> `/admin-dashboard`
+   - Analyst -> `/analyst/dashboard`
+   - User -> `/customer-dashboard`
 
 ## OAuth (Optional)
 
-Set credentials in `server/.env`:
+Set provider keys in `server/.env`:
 
 ```env
 GOOGLE_CLIENT_ID=...
@@ -81,15 +89,17 @@ GITHUB_CLIENT_ID=...
 GITHUB_CLIENT_SECRET=...
 ```
 
-Provider callback URLs:
+Provider callbacks:
 - Google: `http://localhost:5000/api/auth/google/callback`
 - GitHub: `http://localhost:5000/api/auth/github/callback`
 
 ## Common Issues
 
 - Backend unreachable:
-  Verify `VITE_API_URL` points to the active backend port.
+  Check `VITE_API_URL` and confirm the server is running.
 - CORS errors:
-  Ensure `CLIENT_URL` matches frontend origin.
-- OAuth redirect mismatch:
-  Match callback URLs in both provider dashboard and `CALLBACK_URL`.
+  Ensure `CLIENT_URL` matches the frontend origin.
+- OAuth mismatch:
+  Match callback URLs in both the provider dashboard and `CALLBACK_URL`.
+- Live badge stuck on polling:
+  This is expected until `VITE_WS_URL` points to a real WebSocket server.

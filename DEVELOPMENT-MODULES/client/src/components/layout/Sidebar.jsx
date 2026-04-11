@@ -4,8 +4,17 @@ import {
     LayoutDashboard, Activity, ShieldAlert, ListFilter,
     BrainCircuit, BarChart4, FileText, Users, Settings
 } from 'lucide-react';
+import { getStoredUser } from '../../lib/auth';
 
 const Sidebar = () => {
+    const user = getStoredUser();
+    const initials = (user?.name || 'Admin User')
+        .split(' ')
+        .map((part) => part[0] || '')
+        .join('')
+        .slice(0, 2)
+        .toUpperCase();
+
     const navItems = [
         { name: 'Dashboard Overview', path: '/admin-dashboard', icon: <LayoutDashboard size={20} /> },
         { name: 'Transaction Monitoring', path: '/admin-dashboard/transactions', icon: <Activity size={20} /> },
@@ -45,11 +54,11 @@ const Sidebar = () => {
             <div className="p-4 border-t border-slate-800">
                 <div className="flex items-center space-x-3 px-3 py-2">
                     <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-sm font-bold">
-                        AD
+                        {initials}
                     </div>
                     <div>
-                        <p className="text-sm font-medium">Admin User</p>
-                        <p className="text-xs text-slate-500">Security Team</p>
+                        <p className="text-sm font-medium">{user?.name || 'Admin User'}</p>
+                        <p className="text-xs text-slate-500">{user?.department || 'Security Team'}</p>
                     </div>
                 </div>
             </div>

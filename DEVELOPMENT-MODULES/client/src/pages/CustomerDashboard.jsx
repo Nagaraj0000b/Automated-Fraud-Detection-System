@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { transactionAPI, accountAPI } from '../services/api';
+import { getHomePathForUser } from '../lib/auth';
 
 const CustomerDashboard = () => {
   const navigate = useNavigate();
@@ -31,6 +32,10 @@ const CustomerDashboard = () => {
       return;
     }
     const parsedUser = JSON.parse(storedUser);
+    if (parsedUser.role && parsedUser.role !== 'user') {
+      navigate(getHomePathForUser(parsedUser), { replace: true });
+      return;
+    }
     setUser(parsedUser);
     
     if(parsedUser.accountBalance) setBalance(parsedUser.accountBalance);

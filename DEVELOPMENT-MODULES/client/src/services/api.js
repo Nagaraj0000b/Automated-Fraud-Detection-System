@@ -56,12 +56,17 @@ export const authAPI = {
     const response = await api.get('/auth/me');
     return response.data;
   },
+  logout: async () => {
+    const response = await api.post('/auth/logout');
+    return response.data;
+  },
   googleAuth: (loginAs) => {
     const base = `${API_URL.replace('/api', '')}/api/auth/google`;
     window.location.href = loginAs ? `${base}?loginAs=${loginAs}` : base;
   },
-  githubAuth: () => {
-    window.location.href = `${API_URL.replace('/api', '')}/api/auth/github`;
+  githubAuth: (loginAs) => {
+    const base = `${API_URL.replace('/api', '')}/api/auth/github`;
+    window.location.href = loginAs ? `${base}?loginAs=${loginAs}` : base;
   },
 };
 
@@ -121,7 +126,7 @@ export const alertAPI = {
 };
 
 // ─── WEBSOCKET SERVICE (NEW) ──────────────────────────────────────────────────
-const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:5000/ws';
+const WS_URL = import.meta.env.VITE_WS_URL || '';
 
 export const websocketService = {
   ws: null,
@@ -130,6 +135,7 @@ export const websocketService = {
 
   // Connect with JWT token — only for analyst/admin/auditor
   connect() {
+    if (!WS_URL) return;
     const token = localStorage.getItem('authToken');
     if (!token || this.ws?.readyState === WebSocket.OPEN) return;
 

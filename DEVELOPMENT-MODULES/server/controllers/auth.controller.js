@@ -4,6 +4,23 @@ const User = require('../models/User');
 const { createAuditLog } = require('./audit.controller');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key';
+const SUPPORTED_ROLES = ['user', 'admin', 'analyst', 'auditor'];
+const ROLE_LABELS = {
+  user: 'User',
+  admin: 'Admin',
+  analyst: 'Analyst',
+  auditor: 'Auditor',
+};
+
+const normalizeRole = (role = '') => {
+  const normalized = String(role || '')
+    .trim()
+    .toLowerCase();
+
+  return SUPPORTED_ROLES.includes(normalized) ? normalized : '';
+};
+
+const getRoleLabel = (role = '') => ROLE_LABELS[normalizeRole(role)] || 'Account';
 
 // Helper function to generate JWT
 const generateToken = (user, expiresIn = '24h') => {
@@ -109,7 +126,7 @@ exports.signup = async (req, res) => {
 // Sign in controller
 exports.signin = async (req, res) => {
   try {
-    const { email, password, rememberMe } = req.body;
+    const { email, password, rememberMe, expectedRole } = req.body;
 
     // Validation
     if (!email || !password) {
@@ -145,6 +162,16 @@ exports.signin = async (req, res) => {
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password'
+      });
+    }
+
+    const normalizedExpectedRole = normalizeRole(expectedRole);
+    if (normalizedExpectedRole && user.role !== normalizedExpectedRole) {
+      return res.status(403).json({
+        success: false,
+        code: 'ROLE_MISMATCH',
+        actualRole: user.role,
+        message: `This account is registered as ${getRoleLabel(user.role)}. Please use the matching role to continue.`
       });
     }
 
@@ -206,7 +233,7 @@ exports.getMe = async (req, res) => {
 // OAuth success handler
 exports.oauthSuccess = async (req, res) => {
   const token = generateToken(req.user);
-  const loginAs = req.loginAs || '';
+  const loginAs = normalizeRole(req.loginAs || '');
 
   // Log the OAuth signin event
   await createAuditLog({
@@ -221,11 +248,50 @@ exports.oauthSuccess = async (req, res) => {
 
   // Redirect to frontend OAuth success page with token (and optional loginAs)
   const clientURL = process.env.CLIENT_URL || 'http://localhost:3000';
+  if (loginAs && req.user.role !== loginAs) {
+    const searchParams = new URLSearchParams({
+      error: 'role_mismatch',
+      actualRole: req.user.role,
+    });
+    return res.redirect(`${clientURL}/signin?${searchParams.toString()}`);
+  }
+
   const redirectUrl = `${clientURL}/oauth-success?token=${token}${
     loginAs ? `&loginAs=${loginAs}` : ''
   }`;
 
   res.redirect(redirectUrl);
+};
+
+exports.logout = async (req, res) => {
+  try {
+    if (typeof req.logout === 'function') {
+      await new Promise((resolve, reject) => {
+        req.logout((error) => {
+          if (error) {
+            reject(error);
+            return;
+          }
+          resolve();
+        });
+      });
+    }
+
+    if (req.session) {
+      req.session.destroy(() => {});
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Logged out successfully'
+    });
+  } catch (error) {
+    console.error('Logout error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to log out'
+    });
+  }
 };
 
 // OAuth failure handler

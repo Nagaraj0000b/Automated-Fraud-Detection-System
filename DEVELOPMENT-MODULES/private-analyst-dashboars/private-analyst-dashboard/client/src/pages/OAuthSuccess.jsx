@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { getHomePathForRole } from '../lib/auth';
 
 const OAuthSuccess = () => {
   const navigate = useNavigate();
@@ -29,26 +30,13 @@ const OAuthSuccess = () => {
 
         setMessage(`Welcome, ${user.name || user.email}! You're now signed in.`);
 
-        // Optional role override from OAuth URL
-        const loginAs = searchParams.get('loginAs');
-        console.log('OAuth loginAs:', loginAs, '| user.role:', user.role);
-
-        // Decide where to send user
-        let target = '/customer-dashboard';
-
-        if (user.role === 'analyst' || loginAs === 'analyst') {
-          target = '/analyst/dashboard';
-        } else if (user.role === 'admin' && loginAs !== 'user') {
-          target = '/admin-dashboard';
-        }
-
-        navigate(target);
+        navigate(getHomePathForRole(user.role));
       } catch (error) {
         console.error('Error decoding token:', error);
         setMessage('Authentication successful! Token stored.');
 
         // Fallback routing
-        navigate('/dashboard');
+        navigate('/');
       }
     } else {
       setMessage('No token received. Please try signing in again.');
@@ -71,7 +59,7 @@ const OAuthSuccess = () => {
         <h1 className="text-3xl font-bold text-white mb-4">Sign-in Successful!</h1>
         <p className="text-white/70 mb-6">{message}</p>
         <Link
-          to="/customer-dashboard"
+          to="/"
           className="inline-block px-6 py-3 bg-gradient-to-r from-pink-500 to-purple-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300"
         >
           Go to Dashboard

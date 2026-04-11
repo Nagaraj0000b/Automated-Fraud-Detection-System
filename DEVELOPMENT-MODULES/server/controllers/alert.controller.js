@@ -1,6 +1,4 @@
 const Transaction = require('../models/Transaction');
-const connectDB = require('../config/database');
-const { getTransactions } = require('../services/demoStore');
 
 const HIGH_RISK_THRESHOLD = 0.5;
 const RECENT_ALERT_WINDOW_MS = 4 * 60 * 60 * 1000;
@@ -104,30 +102,6 @@ exports.getAlerts = async (req, res) => {
     const parsedLimit = Number(limit) || 20;
     const parsedPage = Number(page) || 1;
 
-    if (!connectDB.isConnected()) {
-      let alerts = getTransactions()
-        .filter((txn) => txn.status === 'flagged' || txn.status === 'blocked' || (txn.riskScore || 0) >= HIGH_RISK_THRESHOLD)
-        .map((txn) => buildAlert({ ...txn, user: txn.userDetails || null }));
-
-      if (status) {
-        alerts = alerts.filter((item) => item.status === status);
-      }
-      if (riskLevel) {
-        alerts = alerts.filter((item) => item.riskLevel === riskLevel);
-      }
-
-      const total = alerts.length;
-      const paginated = alerts.slice((parsedPage - 1) * parsedLimit, parsedPage * parsedLimit);
-
-      return res.status(200).json({
-        success: true,
-        alerts: paginated,
-        total,
-        page: parsedPage,
-        pages: Math.ceil(total / parsedLimit) || 1,
-      });
-    }
-
     const [transactions, total] = await Promise.all([
       Transaction.find(query)
         .populate('user', 'name email')
@@ -154,19 +128,6 @@ exports.getRecentAlerts = async (req, res) => {
   try {
     const recentSince = new Date(Date.now() - RECENT_ALERT_WINDOW_MS);
 
-    if (!connectDB.isConnected()) {
-      const alerts = getTransactions()
-        .filter((txn) => new Date(txn.createdAt) >= recentSince)
-        .filter((txn) => txn.status === 'flagged' || txn.status === 'blocked' || (txn.riskScore || 0) >= HIGH_RISK_THRESHOLD)
-        .slice(0, 10)
-        .map((txn) => buildAlert({ ...txn, user: txn.userDetails || null }));
-
-      return res.status(200).json({
-        success: true,
-        alerts,
-      });
-    }
-
     const transactions = await Transaction.find({
       createdAt: { $gte: recentSince },
       $or: [
@@ -190,35 +151,6 @@ exports.getRecentAlerts = async (req, res) => {
 
 exports.getAlertStats = async (req, res) => {
   try {
-    if (!connectDB.isConnected()) {
-      const allAlerts = getTransactions().filter(
-        (txn) => txn.status === 'flagged' || txn.status === 'blocked' || (txn.riskScore || 0) >= HIGH_RISK_THRESHOLD
-      );
-      const averageRisk = allAlerts.length
-        ? Number((allAlerts.reduce((sum, alert) => sum + (alert.riskScore || 0), 0) / allAlerts.length).toFixed(4))
-        : 0;
-      const byLevel = {
-        Critical: 0,
-        High: 0,
-        Medium: 0,
-        Low: 0,
-      };
-
-      allAlerts.forEach((alert) => {
-        byLevel[getRiskLevel(alert.riskScore || 0)] += 1;
-      });
-
-      return res.status(200).json({
-        success: true,
-        stats: {
-          totalFraudDetected: allAlerts.length,
-          avgRiskScore: Math.round(averageRisk * 100),
-          weekChange: 0,
-          byLevel,
-        },
-      });
-    }
-
     const now = new Date();
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);

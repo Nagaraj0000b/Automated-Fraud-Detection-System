@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { authAPI } from '../services/api';
+import { getHomePathForRole } from '../lib/auth';
+
+const BACKEND_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace('/api', '');
 
 const SignUp = () => {
   const navigate = useNavigate();
@@ -104,18 +107,13 @@ const SignUp = () => {
           `Welcome, ${data.user.name}!\n\nYour account has been created successfully.`
         );
 
-        // Redirect based on role
-        if (data.user.role === 'admin' || data.user.role === 'analyst') {
-          navigate('/dashboard');
-        } else {
-          navigate('/customer-dashboard');
-        }
+        navigate(getHomePathForRole(data.user.role));
       }
     } catch (error) {
       console.error('Sign up error:', error);
       const message =
         error.response?.data?.message ||
-        'Cannot connect to server. Make sure the backend is running on http://localhost:5000';
+        `Cannot connect to server. Make sure the backend is running on ${BACKEND_URL}`;
       setErrors({ email: message });
     } finally {
       setIsSubmitting(false);

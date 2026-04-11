@@ -1,4 +1,7 @@
+const dns = require('dns');
 const mongoose = require('mongoose');
+
+let dbConnected = false;
 
 const connectDB = async () => {
   try {
@@ -6,18 +9,27 @@ const connectDB = async () => {
     const MONGODB_URI =
       process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/fraud-detection-auth';
 
-    await mongoose.connect(MONGODB_URI);
+    if (MONGODB_URI.startsWith('mongodb+srv://')) {
+      // Atlas SRV DNS resolution can be flaky on some Windows setups.
+      dns.setServers(['8.8.8.8', '1.1.1.1']);
+    }
 
-    console.log('✅ Connected to MongoDB');
+    await mongoose.connect(MONGODB_URI);
+    dbConnected = true;
+
+    console.log('âœ… Connected to MongoDB');
     console.log(
-      `🗄️  Database: ${
+      `ðŸ—„ï¸  Database: ${
         MONGODB_URI.includes('mongodb+srv') ? 'MongoDB Atlas' : 'Local MongoDB'
       }`
     );
   } catch (error) {
-    console.error('❌ MongoDB connection error:', error);
-    process.exit(1);
+    dbConnected = false;
+    console.error('âŒ MongoDB connection error:', error);
+    throw error;
   }
 };
+
+connectDB.isConnected = () => dbConnected || mongoose.connection.readyState === 1;
 
 module.exports = connectDB;

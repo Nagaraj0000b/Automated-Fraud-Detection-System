@@ -11,6 +11,7 @@ const riskColors = {
 };
 
 export default function DashboardOverview() {
+  const liveUpdatesEnabled = Boolean(import.meta.env.VITE_WS_URL);
   const [stats, setStats] = useState(null);
   const [alertStats, setAlertStats] = useState(null);
   const [recentAlerts, setRecentAlerts] = useState([]);
@@ -80,8 +81,8 @@ export default function DashboardOverview() {
       {/* HEADER */}
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Dashboard Overview</h2>
-        <div className={`px-3 py-1 rounded-full text-xs ${wsConnected ? 'bg-green-100 text-green-700' : 'bg-gray-200'}`}>
-          {wsConnected ? 'LIVE' : 'Connecting...'}
+        <div className={`px-3 py-1 rounded-full text-xs ${wsConnected ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-slate-600'}`}>
+          {liveUpdatesEnabled ? (wsConnected ? 'LIVE' : 'Connecting...') : 'Polling'}
         </div>
       </div>
 

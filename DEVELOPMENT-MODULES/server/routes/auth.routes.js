@@ -10,6 +10,9 @@ router.post('/signup', authController.signup);
 // Sign in route
 router.post('/signin', authController.signin);
 
+// Logout route
+router.post('/logout', authController.logout);
+
 // Get current user (protected route)
 router.get('/me', verifyToken, authController.getMe);
 
@@ -63,11 +66,11 @@ router.get('/github', (req, res, next) => {
       message: 'GitHub OAuth is not configured on this server.',
     });
   }
-  return passport.authenticate('github', { scope: ['user:email'] })(
-    req,
-    res,
-    next
-  );
+  const loginAs = req.query.loginAs || '';
+  return passport.authenticate('github', {
+    scope: ['user:email'],
+    state: loginAs,
+  })(req, res, next);
 });
 
 router.get(
@@ -79,6 +82,7 @@ router.get(
         message: 'GitHub OAuth is not configured on this server.',
       });
     }
+    req.loginAs = req.query.state || '';
     return passport.authenticate('github', {
       session: false,
       failureRedirect: '/oauth-failed',

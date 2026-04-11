@@ -16,6 +16,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { alertAPI, dashboardAPI, dataAdminAPI, modelAPI, transactionAPI } from '@/services/api';
+import { getHomePathForUser } from '@/lib/auth';
 
 const views = [
   { id: 'overview', label: 'Overview', icon: Activity },
@@ -132,7 +133,7 @@ export default function AnalystDashboardRealV2() {
       return;
     }
     if (!['admin', 'analyst'].includes(user.role)) {
-      navigate('/user-dashboard', { replace: true });
+      navigate(getHomePathForUser(user), { replace: true });
       return;
     }
     fetchDashboard();
