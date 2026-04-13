@@ -205,7 +205,7 @@ export default function TransactionMonitoring() {
                                                 {txn.description && <div className="text-xs text-slate-500 truncate max-w-[150px]">{txn.description}</div>}
                                             </td>
                                             <td className="px-6 py-4 font-medium text-slate-900">
-                                                ${txn.amount?.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                                ₹{txn.amount?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                                             </td>
                                             <td className="px-6 py-4">
                                                 <span className={`px-2.5 py-1 rounded-full text-xs font-medium capitalize ${getStatusStyle(txn.status)}`}>

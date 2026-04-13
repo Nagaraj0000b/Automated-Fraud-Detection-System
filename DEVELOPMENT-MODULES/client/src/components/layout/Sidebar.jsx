@@ -11,8 +11,7 @@ const Sidebar = () => {
         { name: 'Transaction Monitoring', path: '/admin-dashboard/transactions', icon: <Activity size={20} /> },
         { name: 'Compliance & Audit', path: '/admin-dashboard/audit', icon: <FileText size={20} /> },
         { name: 'User Management', path: '/admin-dashboard/users', icon: <Users size={20} /> },
-        { name: 'Reactivation Requests', path: '/admin-dashboard/reactivations', icon: <UserCheck size={20} /> },
-        { name: 'Support Requests', path: '/admin-dashboard/support', icon: <LifeBuoy size={20} /> },
+        { name: 'Support & Appeals', path: '/admin-dashboard/reactivations', icon: <LifeBuoy size={20} /> },
         { name: 'System Settings', path: '/admin-dashboard/settings', icon: <Settings size={20} /> },
     ];
 

@@ -166,7 +166,7 @@ exports.deleteUser = async (req, res) => {
     }
 };
 
-// POST /api/users/reactivation-request — Create a reactivation request (Public)
+// POST /api/users/reactivation-request — Create or append to a reactivation request (Public)
 exports.createReactivationRequest = async (req, res) => {
     try {
         const { email, reason } = req.body;
@@ -184,23 +184,40 @@ exports.createReactivationRequest = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Account is not suspended' });
         }
 
-        // Check if there's already a pending request
-        const existingRequest = await ReactivationRequest.findOne({ user: user._id, status: 'pending' });
+        // Find existing non-resolved request
+        const existingRequest = await ReactivationRequest.findOne({ 
+            user: user._id, 
+            status: { $in: ['pending', 'needs_info'] } 
+        }).sort({ createdAt: -1 });
+
         if (existingRequest) {
-            return res.status(409).json({ success: false, message: 'You already have a pending reactivation request' });
+            existingRequest.messages.push({ sender: 'user', text: reason });
+            // If it was needs_info, move it back to pending
+            if (existingRequest.status === 'needs_info') {
+                existingRequest.status = 'pending';
+            }
+            await existingRequest.save();
+            return res.status(200).json({ 
+                success: true, 
+                message: 'Message sent successfully',
+                request: existingRequest
+            });
         }
 
+        // Create new request if none exists or they were resolved/rejected
         const newRequest = new ReactivationRequest({
             user: user._id,
             email: email.toLowerCase(),
-            reason
+            reason,
+            messages: [{ sender: 'user', text: reason }]
         });
 
         await newRequest.save();
 
         res.status(201).json({
             success: true,
-            message: 'Reactivation request submitted successfully'
+            message: 'Reactivation request submitted successfully',
+            request: newRequest
         });
     } catch (error) {
         console.error('Create reactivation request error:', error);
@@ -227,12 +244,57 @@ exports.getReactivationRequests = async (req, res) => {
 };
 
 // PATCH /api/users/reactivation-requests/:id/status — Update request status (Admin only)
+exports.unblockUser = async (req, res) => {
+    try {
+        const userId = req.params.id;
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        const oldStatus = user.status;
+        user.status = 'active';
+        await user.save();
+
+        // Optionally approve any pending reactivation requests for this user
+        await ReactivationRequest.updateMany(
+            { user: userId, status: 'pending' },
+            { $set: { status: 'approved', adminNotes: 'Unblocked manually by admin' } }
+        );
+
+        await createAuditLog({
+            action: 'Account Unblocked',
+            actor: req.user.userId || req.user.id || 'system',
+            actorName: req.user.name || 'Admin',
+            target: `User: ${user.email}`,
+            ipAddress: req.ip,
+            details: {
+                oldStatus,
+                newStatus: 'active',
+                reason: 'Manually unblocked by admin',
+                summary: `User account unblocked`
+            },
+            result: 'Success'
+        });
+
+        res.status(200).json({
+            success: true,
+            message: 'User unblocked successfully',
+            data: user
+        });
+    } catch (error) {
+        console.error('Error unblocking user:', error);
+        res.status(500).json({ success: false, message: 'Error unblocking user', error: error.message });
+    }
+};
+
 exports.updateReactivationRequestStatus = async (req, res) => {
     try {
         const { status, adminNotes } = req.body;
         const requestId = req.params.id;
 
-        if (!['approved', 'rejected'].includes(status)) {
+        if (!['approved', 'rejected', 'needs_info'].includes(status)) {
             return res.status(400).json({ success: false, message: 'Invalid status' });
         }
 
@@ -242,7 +304,10 @@ exports.updateReactivationRequestStatus = async (req, res) => {
         }
 
         request.status = status;
-        if (adminNotes) request.adminNotes = adminNotes;
+        if (adminNotes) {
+            request.adminNotes = adminNotes;
+            request.messages.push({ sender: 'admin', text: adminNotes });
+        }
         await request.save();
 
         // If approved, reactivate the user
@@ -276,6 +341,34 @@ exports.updateReactivationRequestStatus = async (req, res) => {
         });
     } catch (error) {
         console.error('Update reactivation request error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+};
+
+exports.getReactivationRequestStatusPublic = async (req, res) => {
+    try {
+        const { email } = req.params;
+        if (!email) {
+            return res.status(400).json({ success: false, message: 'Email is required' });
+        }
+        
+        // Find the most recent request
+        const request = await ReactivationRequest.findOne({ email: email.toLowerCase() }).sort({ createdAt: -1 });
+        if (!request) {
+            return res.status(404).json({ success: false, message: 'No request found' });
+        }
+        
+        res.status(200).json({
+            success: true,
+            request: {
+                status: request.status,
+                adminNotes: request.adminNotes,
+                userResponse: request.userResponse,
+                messages: request.messages
+            }
+        });
+    } catch (error) {
+        console.error('Get reactivation request status error:', error);
         res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };

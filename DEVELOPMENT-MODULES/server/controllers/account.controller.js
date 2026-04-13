@@ -59,3 +59,37 @@ exports.addAccount = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
+
+// POST /api/accounts/add-money - add money to a specific account
+exports.addMoney = async (req, res) => {
+  try {
+    const { accountId, amount } = req.body;
+
+    if (!accountId || !amount || isNaN(amount) || amount <= 0) {
+      return res.status(400).json({ success: false, message: 'Valid account ID and positive amount are required' });
+    }
+
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const accountIndex = user.accounts.findIndex(acc => acc.accountId === accountId);
+    if (accountIndex === -1) {
+      return res.status(404).json({ success: false, message: 'Account not found' });
+    }
+
+    user.accounts[accountIndex].balance += Number(amount);
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Money added successfully',
+      account: user.accounts[accountIndex],
+      accounts: user.accounts,
+    });
+  } catch (error) {
+    console.error('addMoney error:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
