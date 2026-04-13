@@ -124,6 +124,10 @@ export const accountAPI = {
     const response = await api.post('/accounts', data);
     return response.data;
   },
+  addMoney: async (data) => {
+    const response = await api.post('/accounts/add-money', data);
+    return response.data;
+  },
 };
 
 // User Management API calls (Admin/Analyst)
@@ -152,12 +156,20 @@ export const userAPI = {
     const response = await api.post('/users/reactivation-request', data);
     return response.data;
   },
+  getReactivationRequestStatusPublic: async (email) => {
+    const response = await api.get(`/users/reactivation-request/${encodeURIComponent(email)}`);
+    return response.data;
+  },
   getReactivationRequests: async () => {
     const response = await api.get('/users/reactivation-requests');
     return response.data;
   },
   updateReactivationStatus: async (id, data) => {
     const response = await api.patch(`/users/reactivation-requests/${id}/status`, data);
+    return response.data;
+  },
+  unblockUser: async (userId) => {
+    const response = await api.put(`/users/unblock/${userId}`);
     return response.data;
   }
 };

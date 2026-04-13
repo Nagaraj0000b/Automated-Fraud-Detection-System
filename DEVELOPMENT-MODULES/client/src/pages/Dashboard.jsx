@@ -1,10 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { userAPI } from '../services/api';
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [now, setNow] = useState(new Date());
+  
+  // State to manage suspension appeals
+  const [unblockingId, setUnblockingId] = useState(null);
+  const [appeals, setAppeals] = useState([
+    // Mock data: Replace this array with actual fetched data from your backend
+    { _id: 'a1', email: 'suspendeduser@example.com', reason: 'I was traveling and using a VPN.', userId: 'u123' },
+    { _id: 'a2', email: 'johndoe@test.com', reason: 'My account was flagged by mistake.', userId: 'u124' }
+  ]);
 
   useEffect(() => {
     const token = localStorage.getItem('authToken');
@@ -27,6 +36,21 @@ const Dashboard = () => {
     return () => clearInterval(timer);
   }, [navigate]);
 
+  // Fetch real suspension appeals from the backend on component mount
+  useEffect(() => {
+    const fetchAppeals = async () => {
+      try {
+        const data = await userAPI.getReactivationRequests();
+        // Adapt based on your exact backend response structure
+        if (data && Array.isArray(data)) setAppeals(data);
+        else if (data && Array.isArray(data.requests)) setAppeals(data.requests);
+      } catch (error) {
+        console.error('Failed to fetch appeals:', error);
+      }
+    };
+    fetchAppeals();
+  }, []);
+
   const greeting = useMemo(() => {
     const hour = now.getHours();
     if (hour < 12) return 'Good morning';
@@ -38,6 +62,24 @@ const Dashboard = () => {
     localStorage.removeItem('authToken');
     localStorage.removeItem('user');
     navigate('/signin');
+  };
+
+  // Handler for unblocking a user
+  const handleUnblock = async (userId) => {
+    if (!window.confirm("Are you sure you want to unblock this user account?")) return;
+    
+    setUnblockingId(userId);
+    try {
+      await userAPI.unblockUser(userId);
+      
+      // Remove the unblocked user from the local state list immediately
+      setAppeals(prev => prev.filter(appeal => appeal.userId !== userId));
+      alert("User account unblocked successfully!");
+    } catch (error) {
+      alert(error.response?.data?.message || "Failed to unblock user");
+    } finally {
+      setUnblockingId(null);
+    }
   };
 
   return (
@@ -155,6 +197,35 @@ const Dashboard = () => {
                   </p>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Account Suspension Appeals Section */}
+          <div className="mt-6 rounded-3xl border border-red-500/20 bg-white/5 p-6 shadow-xl shadow-black/20">
+            <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+              Suspension Appeals
+              <span className="rounded-full bg-red-500/20 px-2.5 py-0.5 text-xs text-red-300">{appeals.length} Pending</span>
+            </h2>
+            <div className="mt-6 space-y-4 text-sm text-white/70">
+              {appeals.length === 0 ? (
+                <p className="text-white/40 italic">No pending account appeals to review.</p>
+              ) : (
+                appeals.map((appeal) => (
+                  <div key={appeal._id} className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                    <div>
+                      <p className="text-white font-medium">{appeal.email}</p>
+                      <p className="text-xs text-white/50 mt-1">Appeal Reason: "{appeal.reason}"</p>
+                    </div>
+                    <button
+                      onClick={() => handleUnblock(appeal.userId)}
+                      disabled={unblockingId === appeal.userId}
+                      className="rounded-full bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 text-xs font-semibold shadow-lg shadow-emerald-900/40 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    >
+                      {unblockingId === appeal.userId ? 'Unblocking...' : 'Unblock Account'}
+                    </button>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>

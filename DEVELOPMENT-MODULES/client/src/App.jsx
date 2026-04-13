@@ -47,7 +47,6 @@ function App() {
           <Route path="audit" element={<ComplianceLogs />} />
           <Route path="users" element={<UserManagement />} />
           <Route path="reactivations" element={<ReactivationRequests />} />  
-          <Route path="support" element={<SupportTickets />} />
           <Route path="settings" element={<SystemSettings />} />
         </Route>
       </Routes>

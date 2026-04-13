@@ -24,6 +24,34 @@ const CustomerDashboard = () => {
   const [newAccountBankName, setNewAccountBankName] = useState("");
   const [showBankList, setShowBankList] = useState(false);
 
+  // Add Money Modal State
+  const [showAddMoneyModal, setShowAddMoneyModal] = useState(false);
+  const [addMoneyAmount, setAddMoneyAmount] = useState("");
+  const [addMoneyLoading, setAddMoneyLoading] = useState(false);
+
+  const handleAddMoney = async (e) => {
+    e.preventDefault();
+    if (!addMoneyAmount || isNaN(addMoneyAmount) || Number(addMoneyAmount) <= 0) return;
+    setAddMoneyLoading(true);
+    try {
+      const response = await accountAPI.addMoney({
+        accountId: selectedAccountId,
+        amount: Number(addMoneyAmount)
+      });
+      if (response.success && response.account) {
+        setBalance(response.account.balance);
+        setAccounts(response.accounts);
+        setShowAddMoneyModal(false);
+        setAddMoneyAmount("");
+      }
+    } catch (error) {
+      console.error('Failed to add money', error);
+      alert('Failed to add money: ' + (error.response?.data?.message || error.message));
+    } finally {
+      setAddMoneyLoading(false);
+    }
+  };
+
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     if (!storedUser) {
@@ -74,9 +102,15 @@ const CustomerDashboard = () => {
   const fetchHistory = async (accountId) => {
     try {
       const data = await transactionAPI.getMyTransactions(accountId);
-      setTransactions(data);
+      if (Array.isArray(data)) {
+        setTransactions(data);
+      } else {
+        setTransactions([]);
+        console.warn("Transactions data is not an array:", data);
+      }
     } catch (error) {
       console.error("Failed to load transactions", error);
+      setTransactions([]);
     }
   };
 
@@ -183,7 +217,7 @@ const CustomerDashboard = () => {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans overflow-hidden flex">
+    <div className="min-h-screen bg-slate-50 text-slate-900 overflow-hidden flex">
 
       {/* SIDEBAR NAVIGATION */}
       <aside className="w-64 flex-shrink-0 border-r border-slate-800 bg-slate-900 text-slate-100 flex flex-col z-20 hidden md:flex">
@@ -352,7 +386,21 @@ const CustomerDashboard = () => {
                 <div className="relative z-10 flex flex-col md:flex-row justify-between items-end md:items-center gap-6">
                   <div>
                     <p className="text-blue-100 text-sm font-medium tracking-wider uppercase mb-2">Total Balance</p>
-                    <h2 className="text-5xl md:text-6xl font-bold text-white tracking-tight">₹{balance.toLocaleString()}</h2>
+                    <div className="flex items-center gap-4">
+                      <h2 className="text-5xl md:text-6xl font-bold text-white tracking-tight">₹{balance.toLocaleString()}</h2>
+                      <button 
+                        onClick={() => setShowAddMoneyModal(true)}
+                        className="hidden md:flex bg-white/20 hover:bg-white/30 text-white text-sm font-medium px-4 py-2 rounded-xl backdrop-blur-sm border border-white/10 transition-all items-center gap-2 shadow-lg"
+                      >
+                        <span className="text-lg leading-none">+</span> Add Funds
+                      </button>
+                    </div>
+                    <button 
+                      onClick={() => setShowAddMoneyModal(true)}
+                      className="mt-4 md:hidden w-full flex justify-center bg-white/20 hover:bg-white/30 text-white text-sm font-medium px-4 py-2.5 rounded-xl backdrop-blur-sm border border-white/10 transition-all items-center gap-2 shadow-lg"
+                    >
+                      <span className="text-lg leading-none">+</span> Add Funds
+                    </button>
                   </div>
                   <div className="flex flex-col items-end gap-2">
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-black/20 backdrop-blur-sm rounded-lg border border-white/10">
@@ -382,7 +430,7 @@ const CustomerDashboard = () => {
                            </div>
                         </div>
                         <span className={`font-mono font-medium ${tx.status === 'blocked' ? 'text-slate-400 line-through' : 'text-slate-900'}`}>
-                          -₹{tx.amount.toLocaleString()}
+                          -₹{(tx.amount || 0).toLocaleString()}
                         </span>
                     </div>
                   ))}
@@ -574,6 +622,48 @@ const CustomerDashboard = () => {
                   className="px-4 py-2 text-sm font-medium bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg shadow-lg shadow-emerald-900/20 transition-all transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
                 >
                   Save Account
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* Add Money Modal */}
+      {showAddMoneyModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-[#0f172a] border border-white/10 rounded-2xl w-full max-w-md shadow-2xl p-6">
+            <h3 className="text-xl font-bold text-white mb-2">Add Funds to Account</h3>
+            <p className="text-sm text-white/50 mb-6">
+              Enter the amount you wish to deposit into <span className="font-mono text-white/80">{getAccountNumber()}</span>.
+            </p>
+            <form onSubmit={handleAddMoney} className="space-y-4">
+              <div>
+                <label className="text-xs font-medium text-white/70 uppercase tracking-wider mb-2 block">Amount (₹)</label>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={addMoneyAmount}
+                  onChange={(e) => setAddMoneyAmount(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                  placeholder="e.g., 5000"
+                  required
+                />
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => { setShowAddMoneyModal(false); setAddMoneyAmount(""); }}
+                  className="px-4 py-2 text-sm font-medium text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={addMoneyLoading || !addMoneyAmount}
+                  className="px-4 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white rounded-lg shadow-lg shadow-blue-900/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+                >
+                  {addMoneyLoading ? 'Processing...' : 'Deposit Funds'}
                 </button>
               </div>
             </form>

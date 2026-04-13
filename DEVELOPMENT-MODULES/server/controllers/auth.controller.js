@@ -148,6 +148,14 @@ exports.signin = async (req, res) => {
       });
     }
 
+    if (user.status === 'suspended') {
+      return res.status(403).json({
+        success: false,
+        code: 'ACCOUNT_SUSPENDED',
+        message: 'Your account has been suspended'
+      });
+    }
+
     // Generate JWT token
     const tokenExpiration = rememberMe ? '7d' : '24h';
     const token = generateToken(user, tokenExpiration);
