@@ -96,7 +96,7 @@ const SignIn = () => {
             }
         } catch (error) {
             console.error('Sign in error:', error);
-            const message = error.response?.data?.message || 'Cannot connect to server. Make sure the backend is running on http://localhost:5001';
+            const message = error.response?.data?.message || 'Cannot connect to server. Make sure the backend is running on http://localhost:5000';
             setErrors({ email: message });
         } finally {
             setIsSubmitting(false);

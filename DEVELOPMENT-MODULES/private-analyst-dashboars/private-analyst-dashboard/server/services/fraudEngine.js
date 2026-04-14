@@ -1,3 +1,4 @@
+const { predict } = require('../ml/predict');
 const RiskRule = require('../models/RiskRule');
 const Transaction = require('../models/Transaction');
 const connectDB = require('../config/database');
@@ -238,19 +239,51 @@ exports.scoreTransaction = async ({
     recommendedStatus = 'flagged';
   }
 
+  // ML prediction
+  let mlResult = null;
+  try {
+    mlResult = predict({
+      amount: normalizedAmount,
+      type: transactionType,
+      status: recommendedStatus,
+      createdAt: now,
+      riskScore: riskScore,
+    });
+  } catch (_) {}
+
+  // Combine ML + Rules
+  if (mlResult && mlResult.fraudProbability > 70 && recommendedStatus === 'approved') {
+    recommendedStatus = 'flagged';
+    reasons.push('ML model detected suspicious pattern');
+    reasonCodes.push('ML_FRAUD_DETECTED');
+  }
+  if (mlResult && mlResult.fraudProbability > 88 && recommendedStatus !== 'blocked') {
+    recommendedStatus = 'blocked';
+    reasons.push('ML model high confidence fraud');
+    reasonCodes.push('ML_HIGH_CONFIDENCE_FRAUD');
+  }
+
+  const finalRiskScore = mlResult
+    ? clamp(Number(((riskScore + mlResult.fraudProbability / 100) / 2).toFixed(4)), 0.01, 0.99)
+    : riskScore;
+  const finalRiskScorePercent = Math.round(finalRiskScore * 100);
+  const finalRiskLevel = toRiskLevel(finalRiskScorePercent);
+
   return {
-    riskScore,
-    riskScorePercent,
-    riskLevel,
+    riskScore: finalRiskScore,
+    riskScorePercent: finalRiskScorePercent,
+    riskLevel: finalRiskLevel,
     recommendedStatus,
     reasons,
     reasonCodes: Array.from(new Set([...reasonCodes, ...triggeredRules.map((rule) => rule.reasonCode)])),
     metrics,
     triggeredRules,
+    mlScore: mlResult ? mlResult.fraudProbability : null,
     modelSummary: {
       engine: 'FraudGuard Hybrid Engine',
-      mode: activeRules.length ? 'rules-plus-heuristics' : 'heuristics-fallback',
+      mode: activeRules.length ? 'rules-plus-heuristics-plus-ml' : 'heuristics-plus-ml',
       evaluatedRules: activeRules.length,
+      mlEnabled: mlResult !== null,
     },
   };
 };

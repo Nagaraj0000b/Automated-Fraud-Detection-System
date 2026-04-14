@@ -4,7 +4,7 @@ const dotenv = require('dotenv');
 
 // Load environment variables before other imports use process.env
 dotenv.config();
-
+const mlRoutes = require('./routes/mlRoutes');
 const session = require('express-session');
 const mongoose = require('mongoose');
 const connectDB = require('./config/database');
@@ -53,6 +53,7 @@ app.use('/api/rules', riskRuleRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/models', modelRoutes);
 app.use('/api/data-admin', dataAdminRoutes);
+app.use('/api/ml', mlRoutes);
 
 // OAuth failure route
 app.get('/oauth-failed', authController.oauthFailure);

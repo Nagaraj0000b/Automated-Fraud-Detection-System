@@ -88,6 +88,7 @@ export default function AnalystDashboardRealV2() {
   const [modelLoadingId, setModelLoadingId] = useState('');
   const [dataActionLoading, setDataActionLoading] = useState('');
   const [actionMessage, setActionMessage] = useState('');
+  const [mlMetrics, setMlMetrics] = useState(null);
 
   const user = useMemo(() => {
     try {
@@ -115,6 +116,17 @@ export default function AnalystDashboardRealV2() {
       setAlerts(alertsRes.alerts || []);
       setTransactions(transactionsRes.transactions || []);
       setModels(modelsRes.models || []);
+
+      try {
+        const mlRes = await fetch(import.meta.env.VITE_API_URL + '/ml/metrics');
+        if (mlRes.ok) {
+          const mlData = await mlRes.json();
+          if (mlData && mlData.accuracy) {
+            setMlMetrics(mlData);
+            setModels(prev => prev.map((m, i) => i === 0 ? Object.assign({}, m, { accuracy: mlData.accuracy, coverage: mlData.coverage, lastTrainedAt: mlData.lastTrained, status: 'active' }) : m));
+          }
+        }
+      } catch (_) {}
       setError('');
     } catch (fetchError) {
       console.error(fetchError);
@@ -620,13 +632,13 @@ export default function AnalystDashboardRealV2() {
                           <span className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${statusBadge[model.status] || 'bg-slate-100 text-slate-600'}`}>
                             {model.status}
                           </span>
-                          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                            simulated
+                          <span className={mlMetrics ? "rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700" : "rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600"}>
+                            {mlMetrics ? "● live ML" : "simulated"}
                           </span>
                         </div>
                         <p className="mt-2 text-sm text-slate-500">{model.type} | {model.version}</p>
                         <p className="mt-1 text-xs text-slate-400">
-                          Training controls simulate analyst workflow state and do not run a live neural-network retraining job yet.
+                          {mlMetrics ? `Live model · Trained on ${mlMetrics.totalSamples} samples · Fraud rate ${mlMetrics.fraudRate}%` : "Training controls simulate analyst workflow state and do not run a live neural-network retraining job yet."}
                         </p>
                       </div>
 

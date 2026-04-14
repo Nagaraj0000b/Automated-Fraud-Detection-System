@@ -170,11 +170,21 @@ export default function AnalystDashboard() {
   const [permBlockedUsers, setPermBlockedUsers] = useState([]);
   const [trainingModels, setTrainingModels] = useState({});
   const [modelStatus, setModelStatus] = useState({});
+  const [mlMetrics, setMlMetrics] = useState(null);
   const [transactions, setTransactions] = useState(TRANSACTIONS.map(t => ({
     ...t,
     displayStatus: t.status,
     displayRisk: t.riskScore >= 85 ? "Critical" : t.riskScore >= 70 ? "High" : t.riskScore >= 50 ? "Medium" : "Low"
   })));
+  useEffect(() => {
+    // Fetch real ML metrics
+    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+    fetch(`${apiUrl}/ml/metrics`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data && !data.error) setMlMetrics(data); })
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     const token = localStorage.getItem("authToken");
     const storedUser = localStorage.getItem("user");
@@ -304,6 +314,15 @@ export default function AnalystDashboard() {
   };
 
   // live clock + pulse
+  useEffect(() => {
+    // Fetch real ML metrics
+    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+    fetch(`${apiUrl}/ml/metrics`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data && !data.error) setMlMetrics(data); })
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     const t = setInterval(() => setTick(p => p + 1), 3000);
     return () => clearInterval(t);

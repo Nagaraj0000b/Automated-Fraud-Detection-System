@@ -312,6 +312,11 @@ export const modelAPI = {
     const response = await api.get('/models');
     return response.data;
   },
+  getMetrics: async () => {
+    const response = await api.get('/ml/metrics');
+    return response.data;
+    return response.data;
+  },
   train: async (id) => {
     const response = await api.post(`/models/${id}/train`);
     return response.data;
