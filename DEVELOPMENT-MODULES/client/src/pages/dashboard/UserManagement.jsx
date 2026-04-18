@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
-import { UserPlus, Settings2, Trash2, Loader2 } from "lucide-react";
+import { UserPlus, Settings2, Trash2, Loader2, Filter } from "lucide-react";
 import { userAPI } from '@/services/api';
+import { useSearchParams } from 'react-router-dom';
 
 export default function UserManagement() {
     const [users, setUsers] = useState([]);
@@ -10,11 +11,30 @@ export default function UserManagement() {
     const [showCreateForm, setShowCreateForm] = useState(false);
     const [activeTab, setActiveTab] = useState('all');
     const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'user', department: 'General' });
+    const [searchParams, setSearchParams] = useSearchParams();
+    const [roleFilter, setRoleFilter] = useState(searchParams.get('role') || '');
 
     // Fetch users on mount
     useEffect(() => {
         fetchUsers();
     }, []);
+
+    // Sync roleFilter with URL changes
+    useEffect(() => {
+        const roleFromUrl = searchParams.get('role');
+        if (roleFromUrl !== roleFilter) {
+            setRoleFilter(roleFromUrl || '');
+        }
+    }, [searchParams]);
+
+    const handleRoleFilterChange = (newRole) => {
+        setRoleFilter(newRole);
+        if (newRole) {
+            setSearchParams({ role: newRole });
+        } else {
+            setSearchParams({});
+        }
+    };
 
     const fetchUsers = async () => {
         try {
@@ -70,6 +90,8 @@ export default function UserManagement() {
         );
     }
 
+    const filteredUsers = roleFilter ? users.filter(u => u.role === roleFilter) : users;
+
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
@@ -77,12 +99,33 @@ export default function UserManagement() {
                     <h2 className="text-2xl font-bold tracking-tight text-slate-900">System Users</h2>
                     <p className="text-slate-500">Manage dashboard access and role-based permissions.</p>
                 </div>
-                <button
-                    onClick={() => setShowCreateForm(!showCreateForm)}
-                    className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
-                >
-                    <UserPlus className="w-4 h-4 mr-2" /> {showCreateForm ? 'Cancel' : 'Invite User'}
-                </button>
+                <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-2">
+                        <Filter className="w-4 h-4 text-slate-400" />
+                        <select 
+                            className="px-3 py-2 bg-white border border-slate-200 rounded-md text-sm font-medium text-slate-600 outline-none"
+                            value={roleFilter}
+                            onChange={(e) => handleRoleFilterChange(e.target.value)}
+                        >
+                            <option value="">All Roles</option>
+                            <option value="admin">Admin</option>
+                            <option value="analyst">Analyst</option>
+                            <option value="auditor">Auditor</option>
+                            <option value="user">User</option>
+                        </select>
+                        {roleFilter && (
+                            <button onClick={() => handleRoleFilterChange('')} className="text-xs text-blue-600 hover:underline">
+                                Clear
+                            </button>
+                        )}
+                    </div>
+                    <button
+                        onClick={() => setShowCreateForm(!showCreateForm)}
+                        className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
+                    >
+                        <UserPlus className="w-4 h-4 mr-2" /> {showCreateForm ? 'Cancel' : 'Invite User'}
+                    </button>
+                </div>
             </div>
 
             {error && (
@@ -165,7 +208,7 @@ export default function UserManagement() {
                             </tr>
                         </thead>
                         <tbody>
-                            {users.filter(u => activeTab === 'all' || u.role === activeTab).map((u) => (
+                            {filteredUsers.filter(u => activeTab === 'all' || u.role === activeTab).map((u) => (
                                 <tr key={u._id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
                                     <td className="px-6 py-4">
                                         <p className="font-medium text-slate-900">{u.name}</p>
@@ -189,7 +232,7 @@ export default function UserManagement() {
                                     </td>
                                 </tr>
                             ))}
-                            {users.filter(u => activeTab === 'all' || u.role === activeTab).length === 0 && (
+                            {filteredUsers.filter(u => activeTab === 'all' || u.role === activeTab).length === 0 && (
                                 <tr><td colSpan="5" className="px-6 py-8 text-center text-slate-400">No {activeTab === 'all' ? '' : activeTab} users found</td></tr>
                             )}
                         </tbody>

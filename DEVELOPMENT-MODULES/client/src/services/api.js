@@ -223,6 +223,10 @@ export const accountAPI = {
     const response = await api.post('/accounts', data);
     return response.data;
   },
+  addMoney: async (data) => {
+    const response = await api.post('/accounts/add-money', data);
+    return response.data;
+  },
 };
 
 // ─── USER MANAGEMENT ─────────────────────────────────────────────────────────
@@ -247,6 +251,26 @@ export const userAPI = {
     const response = await api.delete(`/users/${id}`);
     return response.data;
   },
+  submitReactivationRequest: async (data) => {
+    const response = await api.post('/users/reactivation-request', data);
+    return response.data;
+  },
+  getReactivationRequestStatusPublic: async (email) => {
+    const response = await api.get(`/users/reactivation-request/${encodeURIComponent(email)}`);
+    return response.data;
+  },
+  getReactivationRequests: async () => {
+    const response = await api.get('/users/reactivation-requests');
+    return response.data;
+  },
+  updateReactivationStatus: async (id, data) => {
+    const response = await api.patch(`/users/reactivation-requests/${id}/status`, data);
+    return response.data;
+  },
+  unblockUser: async (userId) => {
+    const response = await api.put(`/users/unblock/${userId}`);
+    return response.data;
+  }
 };
 
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
@@ -272,7 +296,19 @@ export const dataAdminAPI = {
   },
 };
 
-// ─── AUDIT ────────────────────────────────────────────────────────────────────
+// Support / Customer Care API
+export const supportAPI = {
+  createTicket: async (payload) => {
+    const response = await api.post('/support/contact', payload);
+    return response.data;
+  },
+  getTickets: async () => {
+    const response = await api.get('/support/tickets');
+    return response.data;
+  },
+};
+
+// ─── AUDIT & COMPLIANCE ───────────────────────────────────────────────────────
 export const auditAPI = {
   getLogs: async (params) => {
     const response = await api.get('/audit/logs', { params });

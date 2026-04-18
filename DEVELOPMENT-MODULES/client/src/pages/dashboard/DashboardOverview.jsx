@@ -81,7 +81,7 @@ export default function DashboardOverview() {
 
   const cards = [
     { label: 'Fraud Detected', value: alertStats?.totalFraudDetected || 0, icon: ShieldAlert, color: 'text-red-500', bg: 'bg-red-50' },
-    { label: 'Total Activity', value: stats?.transactions?.total24h || 0, icon: CreditCard, color: 'text-indigo-500', bg: 'bg-indigo-50' },
+    { label: 'Total Activity', value: stats?.transactions?.total24h || stats?.transactions?.total || 0, icon: CreditCard, color: 'text-indigo-500', bg: 'bg-indigo-50' },
     { label: 'Avg Risk Score', value: alertStats?.avgRiskScore || 0, icon: Activity, color: 'text-amber-500', bg: 'bg-amber-50' },
     { label: 'Total Users', value: stats?.users?.total || 0, icon: Users, color: 'text-emerald-500', bg: 'bg-emerald-50' },
   ];

@@ -15,4 +15,7 @@ router.get('/my-accounts', accountController.getMyAccounts);
 // POST /api/accounts - create a new account for the logged-in user
 router.post('/', accountController.addAccount);
 
+// POST /api/accounts/add-money - add money to a specific account
+router.post('/add-money', accountController.addMoney);
+
 module.exports = router;

@@ -3,9 +3,18 @@ const router = express.Router();
 const userController = require('../controllers/user.controller');
 const { verifyToken, requireAdmin } = require('../middleware/auth.middleware');
 
-// All user management routes require authentication + admin role
+// Public route for reactivation request
+router.post('/reactivation-request', userController.createReactivationRequest);
+router.get('/reactivation-request/:email', userController.getReactivationRequestStatusPublic);
+
+// Protected routes (Admin only)
 router.use(verifyToken);
 router.use(requireAdmin);
+
+// Reactivation requests management
+router.get('/reactivation-requests', userController.getReactivationRequests);
+router.patch('/reactivation-requests/:id/status', userController.updateReactivationRequestStatus);
+router.put('/unblock/:id', userController.unblockUser);
 
 // GET    /api/users       — List all users
 router.get('/', userController.getAllUsers);
