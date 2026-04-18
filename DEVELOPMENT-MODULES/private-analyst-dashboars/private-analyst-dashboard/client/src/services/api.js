@@ -1,330 +1,511 @@
-import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-
-const api = axios.create({
-  baseURL: API_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Add token to requests if available
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('authToken');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
-
-// Handle global responses
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response) {
-      if (error.response.status === 403 && error.response.data?.code === 'ACCOUNT_SUSPENDED') {
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('user');
-        window.location.href = '/suspended';
-      } else if (error.response.status === 503 && error.response.data?.code === 'MAINTENANCE_MODE') {
-        window.location.href = '/maintenance';
-      } else if (error.response.status === 401 && window.location.pathname !== '/signin') {
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('user');
-        window.location.href = '/signin';
-      }
-    }
-    return Promise.reject(error);
-  }
-);
-
-// ─── AUTH ────────────────────────────────────────────────────────────────────
-export const authAPI = {
-  signIn: async (credentials) => {
-    const response = await api.post('/auth/signin', credentials);
-    return response.data;
-  },
-  signUp: async (userData) => {
-    const response = await api.post('/auth/signup', userData);
-    return response.data;
-  },
-  getMe: async () => {
-    const response = await api.get('/auth/me');
-    return response.data;
-  },
-  googleAuth: (loginAs) => {
-    const base = `${API_URL.replace('/api', '')}/api/auth/google`;
-    window.location.href = loginAs ? `${base}?loginAs=${loginAs}` : base;
-  },
-  githubAuth: () => {
-    window.location.href = `${API_URL.replace('/api', '')}/api/auth/github`;
-  },
-};
-
-// ─── TRANSACTIONS ─────────────────────────────────────────────────────────────
-export const transactionAPI = {
-  getMyTransactions: async (accountId) => {
-    const response = await api.get('/transactions/my-transactions', {
-      params: accountId ? { accountId } : {},
-    });
-    return response.data;
-  },
-  getAllTransactions: async (params) => {
-    const response = await api.get('/transactions/all', { params });
-    return response.data;
-  },
-  updateStatus: async (transactionId, status) => {
-    const response = await api.patch(`/transactions/${transactionId}/status`, { status });
-    return response.data;
-  },
-  createTransaction: async (data) => {
-    const response = await api.post('/transactions/create', data);
-    return response.data;
-  },
-  raiseDispute: async (transactionId, reason) => {
-    const response = await api.post(`/transactions/${transactionId}/dispute`, { reason });
-    return response.data;
-  },
-};
-
-// ─── FRAUD ALERTS (NEW) ───────────────────────────────────────────────────────
-export const alertAPI = {
-  // Get all alerts with optional filters: { status, riskLevel, limit, page }
-  getAll: async (params) => {
-    const response = await api.get('/alerts', { params });
-    return response.data;
-  },
-  // Last 4 hours alerts for dashboard widget
-  getRecent: async () => {
-    const response = await api.get('/alerts/recent');
-    return response.data;
-  },
-  // Stat card numbers: totalFraudDetected, avgRiskScore, weekChange, byLevel
-  getStats: async () => {
-    const response = await api.get('/alerts/stats');
-    return response.data;
-  },
-  // Update alert status: 'open' | 'reviewed' | 'resolved' | 'false_positive'
-  updateStatus: async (alertId, status, notes = '') => {
-    const response = await api.patch(`/alerts/${alertId}/status`, { status, notes });
-    return response.data;
-  },
-  // Manually score a transaction by ID
-  scoreTransaction: async (transactionId) => {
-    const response = await api.post('/alerts/score', { transactionId });
-    return response.data;
-  },
-};
-
-// ─── WEBSOCKET SERVICE (NEW) ──────────────────────────────────────────────────
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:5000/ws';
 
-export const websocketService = {
-  ws: null,
-  listeners: new Map(),
-  pingInterval: null,
+// ─── Helper: make authenticated requests ────────────────────────────────────
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('authToken');
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+};
 
-  // Connect with JWT token — only for analyst/admin/auditor
-  connect() {
-    const token = localStorage.getItem('authToken');
-    if (!token || this.ws?.readyState === WebSocket.OPEN) return;
+// ─── Helper: handle response ─────────────────────────────────────────────────
+const handleResponse = async (response) => {
+  const data = await response.json();
+  if (!response.ok) {
+    const error = new Error(data.message || 'Request failed');
+    error.response = { data, status: response.status };
+    throw error;
+  }
+  return data;
+};
 
-    this.ws = new WebSocket(`${WS_URL}?token=${token}`);
-
-    this.ws.onopen = () => {
-      console.log('[WS] Connected to live fraud alert stream');
-      // Keepalive ping every 30s
-      this.pingInterval = setInterval(() => {
-        if (this.ws?.readyState === WebSocket.OPEN) {
-          this.ws.send(JSON.stringify({ type: 'ping' }));
-        }
-      }, 30000);
-    };
-
-    this.ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        // Notify all registered listeners for this message type
-        const handlers = this.listeners.get(data.type) || [];
-        handlers.forEach((fn) => fn(data));
-        // Also notify wildcard listeners
-        const allHandlers = this.listeners.get('*') || [];
-        allHandlers.forEach((fn) => fn(data));
-      } catch (e) {
-        console.error('[WS] Parse error:', e);
-      }
-    };
-
-    this.ws.onclose = (e) => {
-      console.log('[WS] Disconnected:', e.code);
-      clearInterval(this.pingInterval);
-      // Auto-reconnect after 5s if not intentional close
-      if (e.code !== 1000 && e.code !== 4001 && e.code !== 4003) {
-        setTimeout(() => this.connect(), 5000);
-      }
-    };
-
-    this.ws.onerror = (err) => {
-      console.error('[WS] Error:', err);
-    };
+// ─── Auth API ────────────────────────────────────────────────────────────────
+export const authAPI = {
+  signIn: async ({ email, password, rememberMe }) => {
+    const response = await fetch(`${API_BASE_URL}/auth/signin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, rememberMe }),
+    });
+    return handleResponse(response);
   },
 
-  disconnect() {
-    clearInterval(this.pingInterval);
-    if (this.ws) {
-      this.ws.close(1000, 'User logout');
-      this.ws = null;
-    }
-    this.listeners.clear();
+  signUp: async ({ name, email, password, role }) => {
+    const response = await fetch(`${API_BASE_URL}/auth/signup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, password, role }),
+    });
+    return handleResponse(response);
   },
 
-  // Register event listener: type = 'fraud_alert' | 'stats_update' | '*'
-  on(type, fn) {
-    if (!this.listeners.has(type)) {
-      this.listeners.set(type, []);
-    }
-    this.listeners.get(type).push(fn);
+  logout: async () => {
+    const response = await fetch(`${API_BASE_URL}/auth/logout`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('user');
+    return handleResponse(response);
   },
 
-  // Remove event listener
-  off(type, fn) {
-    const handlers = this.listeners.get(type) || [];
-    this.listeners.set(type, handlers.filter((h) => h !== fn));
+  getMe: async () => {
+    const response = await fetch(`${API_BASE_URL}/auth/me`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  googleAuth: () => {
+    window.location.href = `${API_BASE_URL}/auth/google`;
+  },
+
+  githubAuth: () => {
+    window.location.href = `${API_BASE_URL}/auth/github`;
   },
 };
 
-// ─── ACCOUNTS ────────────────────────────────────────────────────────────────
-export const accountAPI = {
-  getMyAccounts: async () => {
-    const response = await api.get('/accounts/my-accounts');
-    return response.data;
-  },
-  addAccount: async (data) => {
-    const response = await api.post('/accounts', data);
-    return response.data;
-  },
-};
-
-// ─── USER MANAGEMENT ─────────────────────────────────────────────────────────
-export const userAPI = {
-  getAll: async () => {
-    const response = await api.get('/users');
-    return response.data;
-  },
-  getById: async (id) => {
-    const response = await api.get(`/users/${id}`);
-    return response.data;
-  },
-  create: async (userData) => {
-    const response = await api.post('/users', userData);
-    return response.data;
-  },
-  update: async (id, userData) => {
-    const response = await api.put(`/users/${id}`, userData);
-    return response.data;
-  },
-  delete: async (id) => {
-    const response = await api.delete(`/users/${id}`);
-    return response.data;
-  },
-};
-
-// ─── DASHBOARD ────────────────────────────────────────────────────────────────
+// ─── Dashboard API ────────────────────────────────────────────────────────────
 export const dashboardAPI = {
   getStats: async () => {
-    const response = await api.get('/dashboard/stats');
-    return response.data;
+    const response = await fetch(`${API_BASE_URL}/dashboard/stats`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
   },
+
+  getAnalystStats: async () => {
+    const response = await fetch(`${API_BASE_URL}/dashboard/analyst-stats`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+
   getRecentUsers: async () => {
-    const response = await api.get('/dashboard/recent-users');
-    return response.data;
+    const response = await fetch(`${API_BASE_URL}/dashboard/recent-users`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
   },
 };
 
-export const dataAdminAPI = {
-  restoreLatest: async () => {
-    const response = await api.post('/data-admin/restore-latest');
-    return response.data;
+// ─── Transactions API ─────────────────────────────────────────────────────────
+export const transactionAPI = {
+  getAll: async (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    const response = await fetch(`${API_BASE_URL}/transactions/all?${query}`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
   },
-  clearData: async () => {
-    const response = await api.delete('/data-admin/clear');
-    return response.data;
+
+  getById: async (id) => {
+    const response = await fetch(`${API_BASE_URL}/transactions/${id}`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  create: async (transactionData) => {
+    const response = await fetch(`${API_BASE_URL}/transactions/create`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(transactionData),
+    });
+    return handleResponse(response);
+  },
+
+  // ✅ NAYA — Transaction approve karo
+  approveTransaction: async (txId) => {
+    const response = await fetch(`${API_BASE_URL}/data-admin/transactions/${txId}/approve`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  // ✅ NAYA — Transaction block karo
+  blockTransaction: async (txId) => {
+    const response = await fetch(`${API_BASE_URL}/data-admin/transactions/${txId}/block`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  updateStatus: async (txId, status) => {
+    const response = await fetch(`${API_BASE_URL}/transactions/${txId}/status`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ status }),
+    });
+    return handleResponse(response);
+  },
+
+  recover: async (txId) => {
+    const response = await fetch(`${API_BASE_URL}/transactions/${txId}/recover`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  delete: async (txId) => {
+    const response = await fetch(`${API_BASE_URL}/transactions/${txId}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  deleteAll: async () => {
+    const response = await fetch(`${API_BASE_URL}/transactions/all`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  recoverAll: async () => {
+    const response = await fetch(`${API_BASE_URL}/transactions/recover-all`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  // Backward-compatible names
+  getAllTransactions: async (params = {}) => transactionAPI.getAll(params),
+  getMyTransactions: async (accountId) => {
+    const response = await fetch(`${API_BASE_URL}/transactions/my-transactions?accountId=${accountId}`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+  createTransaction: async (transactionData) => transactionAPI.create(transactionData),
+};
+
+// ─── Alerts API ───────────────────────────────────────────────────────────────
+export const alertAPI = {
+  getAll: async (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    const response = await fetch(`${API_BASE_URL}/alerts?${query}`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  updateStatus: async (id, status) => {
+    const response = await fetch(`${API_BASE_URL}/alerts/${id}`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ status }),
+    });
+    return handleResponse(response);
+  },
+
+  getStats: async () => {
+    const response = await fetch(`${API_BASE_URL}/alerts/stats`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
   },
 };
 
-// ─── AUDIT ────────────────────────────────────────────────────────────────────
-export const auditAPI = {
-  getLogs: async (params) => {
-    const response = await api.get('/audit/logs', { params });
-    return response.data;
+// ─── Users API ────────────────────────────────────────────────────────────────
+export const userAPI = {
+  getAll: async (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    const response = await fetch(`${API_BASE_URL}/users?${query}`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  getById: async (id) => {
+    const response = await fetch(`${API_BASE_URL}/users/${id}`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  updateStatus: async (id, status) => {
+    const response = await fetch(`${API_BASE_URL}/users/${id}/status`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ status }),
+    });
+    return handleResponse(response);
+  },
+
+  create: async (userData) => {
+    const response = await fetch(`${API_BASE_URL}/users`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(userData),
+    });
+    return handleResponse(response);
+  },
+
+  update: async (id, userData) => {
+    const response = await fetch(`${API_BASE_URL}/users/${id}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(userData),
+    });
+    return handleResponse(response);
+  },
+
+  delete: async (id) => {
+    const response = await fetch(`${API_BASE_URL}/users/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
   },
 };
 
+// ─── Accounts API ─────────────────────────────────────────────────────────────
+export const accountAPI = {
+  getAll: async () => {
+    const response = await fetch(`${API_BASE_URL}/accounts`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  getMyAccount: async () => {
+    const response = await fetch(`${API_BASE_URL}/accounts/me`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+};
+
+// ─── Notifications API ────────────────────────────────────────────────────────
 export const notificationAPI = {
+  getAll: async () => {
+    const response = await fetch(`${API_BASE_URL}/notifications`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+
   getMyNotifications: async () => {
-    const response = await api.get('/notifications/my');
-    return response.data;
+    const response = await fetch(`${API_BASE_URL}/notifications/my`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
   },
-  markAsRead: async (id) => {
-    const response = await api.patch(`/notifications/${id}/read`);
-    return response.data;
+
+  markRead: async (id) => {
+    const response = await fetch(`${API_BASE_URL}/notifications/${id}/read`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  markAllRead: async () => {
+    const response = await fetch(`${API_BASE_URL}/notifications/read-all`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
   },
 };
 
-// ─── SETTINGS ────────────────────────────────────────────────────────────────
-export const settingAPI = {
-  getSettings: async () => {
-    const response = await api.get('/settings');
-    return response.data;
+// ─── Risk Rules API ───────────────────────────────────────────────────────────
+export const riskRuleAPI = {
+  getAll: async () => {
+    const response = await fetch(`${API_BASE_URL}/rules`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
   },
-  updateSettings: async (settings) => {
-    const response = await api.put('/settings', settings);
-    return response.data;
+
+  create: async (rule) => {
+    const response = await fetch(`${API_BASE_URL}/rules`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(rule),
+    });
+    return handleResponse(response);
   },
+
+  update: async (id, rule) => {
+    const response = await fetch(`${API_BASE_URL}/rules/${id}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(rule),
+    });
+    return handleResponse(response);
+  },
+
+  delete: async (id) => {
+    const response = await fetch(`${API_BASE_URL}/rules/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  getAllRules: async () => riskRuleAPI.getAll(),
+  createRule: async (rule) => riskRuleAPI.create(rule),
+  updateRule: async (id, rule) => riskRuleAPI.update(id, rule),
+  deleteRule: async (id) => riskRuleAPI.delete(id),
 };
 
-// ─── RISK RULES ───────────────────────────────────────────────────────────────
-export const ruleAPI = {
-  getAllRules: async () => {
-    const response = await api.get('/rules');
-    return response.data;
+// ─── Settings API ─────────────────────────────────────────────────────────────
+export const settingsAPI = {
+  get: async () => {
+    const response = await fetch(`${API_BASE_URL}/settings`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
   },
-  createRule: async (ruleData) => {
-    const response = await api.post('/rules', ruleData);
-    return response.data;
+
+  update: async (settings) => {
+    const response = await fetch(`${API_BASE_URL}/settings`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(settings),
+    });
+    return handleResponse(response);
   },
-  updateRule: async (id, ruleData) => {
-    const response = await api.put(`/rules/${id}`, ruleData);
-    return response.data;
+
+  getSettings: async () => settingsAPI.get(),
+  updateSettings: async (settings) => settingsAPI.update(settings),
+};
+
+// ─── ML / Model API ───────────────────────────────────────────────────────────
+export const mlAPI = {
+  predict: async (transactionData) => {
+    const response = await fetch(`${API_BASE_URL}/ml/predict`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(transactionData),
+    });
+    return handleResponse(response);
   },
-  deleteRule: async (id) => {
-    const response = await api.delete(`/rules/${id}`);
-    return response.data;
+
+  getModels: async () => {
+    const response = await fetch(`${API_BASE_URL}/models`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
   },
 };
 
 export const modelAPI = {
   getAll: async () => {
-    const response = await api.get('/models');
-    return response.data;
+    const metricsRes = await fetch(`${API_BASE_URL}/ml/metrics`, {
+      headers: getAuthHeaders(),
+    });
+
+    if (!metricsRes.ok) {
+      if (metricsRes.status === 503) {
+        return {
+          success: true,
+          models: [
+            {
+              id: 'neural-network-v1',
+              name: 'Neural Network',
+              type: 'Fraud Detection Model',
+              version: 'v1.0',
+              status: 'not_trained',
+              accuracy: 0,
+              coverage: 0,
+              progress: 0,
+              lastTrainedAt: null,
+            },
+          ],
+        };
+      }
+      return handleResponse(metricsRes);
+    }
+
+    const metrics = await metricsRes.json();
+    return {
+      success: true,
+      models: [
+        {
+          id: 'neural-network-v1',
+          name: 'Neural Network',
+          type: 'Fraud Detection Model',
+          version: 'v1.0',
+          status: metrics.status || 'active',
+          accuracy: Number(metrics.accuracy || 0),
+          coverage: Number(metrics.coverage || 0),
+          progress: 100,
+          lastTrainedAt: metrics.lastTrained || null,
+          totalSamples: metrics.totalSamples || 0,
+          fraudRate: metrics.fraudRate || 0,
+        },
+      ],
+    };
   },
-  getMetrics: async () => {
-    const response = await api.get('/ml/metrics');
-    return response.data;
-    return response.data;
+
+  train: async () => {
+    const response = await fetch(`${API_BASE_URL}/ml/train`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
   },
-  train: async (id) => {
-    const response = await api.post(`/models/${id}/train`);
-    return response.data;
-  },
-  stop: async (id) => {
-    const response = await api.post(`/models/${id}/stop`);
-    return response.data;
+
+  stop: async () => {
+    return { success: true, message: 'Stop is not supported for this real model.' };
   },
 };
 
-export default api;
+// ─── Data Admin API ───────────────────────────────────────────────────────────
+export const dataAdminAPI = {
+  restoreLatest: async () => {
+    const response = await fetch(`${API_BASE_URL}/data-admin/restore-latest`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  clearData: async () => {
+    const response = await fetch(`${API_BASE_URL}/data-admin/clear`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+};
+
+// ─── Audit API ────────────────────────────────────────────────────────────────
+export const auditAPI = {
+  getLogs: async (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    const response = await fetch(`${API_BASE_URL}/audit?${query}`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+};
+
+// ─── Health Check ─────────────────────────────────────────────────────────────
+export const checkHealth = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/health`);
+    return handleResponse(response);
+  } catch {
+    return { status: 'unreachable' };
+  }
+};
+
+// Alias exports
+export const ruleAPI = riskRuleAPI;
+export const settingAPI = settingsAPI;
+
+export { WS_URL };
+export default API_BASE_URL;

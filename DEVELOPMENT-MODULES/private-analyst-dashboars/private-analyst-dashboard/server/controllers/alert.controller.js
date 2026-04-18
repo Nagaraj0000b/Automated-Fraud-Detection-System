@@ -64,10 +64,7 @@ const buildAlert = (transaction) => ({
 
 const buildQuery = ({ status, riskLevel }) => {
   const query = {
-    $or: [
-      { status: { $in: ['flagged', 'blocked'] } },
-      { riskScore: { $gte: HIGH_RISK_THRESHOLD } },
-    ],
+    status: { $in: ['flagged', 'blocked'] },
   };
 
   if (status) {
@@ -106,7 +103,7 @@ exports.getAlerts = async (req, res) => {
 
     if (!connectDB.isConnected()) {
       let alerts = getTransactions()
-        .filter((txn) => txn.status === 'flagged' || txn.status === 'blocked' || (txn.riskScore || 0) >= HIGH_RISK_THRESHOLD)
+        .filter((txn) => txn.status === 'flagged' || txn.status === 'blocked')
         .map((txn) => buildAlert({ ...txn, user: txn.userDetails || null }));
 
       if (status) {
@@ -157,7 +154,7 @@ exports.getRecentAlerts = async (req, res) => {
     if (!connectDB.isConnected()) {
       const alerts = getTransactions()
         .filter((txn) => new Date(txn.createdAt) >= recentSince)
-        .filter((txn) => txn.status === 'flagged' || txn.status === 'blocked' || (txn.riskScore || 0) >= HIGH_RISK_THRESHOLD)
+        .filter((txn) => txn.status === 'flagged' || txn.status === 'blocked')
         .slice(0, 10)
         .map((txn) => buildAlert({ ...txn, user: txn.userDetails || null }));
 
@@ -169,10 +166,7 @@ exports.getRecentAlerts = async (req, res) => {
 
     const transactions = await Transaction.find({
       createdAt: { $gte: recentSince },
-      $or: [
-        { status: { $in: ['flagged', 'blocked'] } },
-        { riskScore: { $gte: HIGH_RISK_THRESHOLD } },
-      ],
+      status: { $in: ['flagged', 'blocked'] },
     })
       .populate('user', 'name email')
       .sort({ createdAt: -1 })
@@ -223,10 +217,7 @@ exports.getAlertStats = async (req, res) => {
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
     const query = {
-      $or: [
-        { status: { $in: ['flagged', 'blocked'] } },
-        { riskScore: { $gte: HIGH_RISK_THRESHOLD } },
-      ],
+      status: { $in: ['flagged', 'blocked'] },
     };
 
     const [currentAlerts, previousAlerts, allAlerts] = await Promise.all([

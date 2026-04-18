@@ -8,8 +8,11 @@ const mongoose = require('mongoose');
 const {
   ensureUser,
   addTransaction,
+  getAllUsers,
   getTransactions,
   updateTransaction,
+  deleteTransaction: deleteFromDemoStore,
+  clearAllTransactions,
 } = require('../services/demoStore');
 
 const TEST_TOP_UP_BALANCE = 1000000;
@@ -17,17 +20,45 @@ const ALLOWED_TRANSACTION_TYPES = ['deposit', 'withdrawal', 'transfer', 'payment
 
 const isInternalTestUser = (req, user) =>
   ['admin', 'analyst'].includes(req.user?.role);
-const resolveSessionUserId = (req) => req.user?.userId || req.user?.id || '';
+const resolveSessionUserId = (req) => {
+  const id = req.user?.userId || req.user?.id || req.session?.userId || '';
+  if (id && typeof id === 'string' && id.length === 24) {
+    try {
+      return new mongoose.Types.ObjectId(id);
+    } catch (e) {
+      return id;
+    }
+  }
+  return id;
+};
+
 const isDemoSession = (req) => {
   const sessionUserId = resolveSessionUserId(req);
   return (
     !sessionUserId ||
-    !mongoose.Types.ObjectId.isValid(sessionUserId)
+    (typeof sessionUserId === 'string' && !mongoose.Types.ObjectId.isValid(sessionUserId))
   );
 };
 
 const normalizeText = (value = '') => String(value || '').trim();
 const normalizeTransactionType = (value = 'transfer') => String(value || 'transfer').trim().toLowerCase();
+const getDecisionRecommendation = (status = 'pending') => {
+  if (status === 'blocked') return 'Do not proceed';
+  if (status === 'flagged') return 'Manual review required';
+  if (status === 'approved') return 'Safe to proceed';
+  return 'Awaiting review';
+};
+const getDecisionType = (status = 'pending') => {
+  if (status === 'blocked') return 'error';
+  if (status === 'flagged') return 'warning';
+  return 'success';
+};
+const getDecisionSummary = (status = 'pending') => {
+  if (status === 'blocked') return 'Transaction blocked by fraud engine';
+  if (status === 'flagged') return 'Transaction held for admin review';
+  if (status === 'approved') return 'Transaction cleared by fraud engine';
+  return 'Transaction waiting for review';
+};
 const deriveRiskLevel = (riskScore = 0) => {
   if (riskScore >= 0.85) return 'CRITICAL_RISK';
   if (riskScore >= 0.7) return 'HIGH_RISK';
@@ -67,11 +98,49 @@ const transactionToDto = (transaction) => {
         ? Number(transaction.riskScorePercent || 0)
         : Math.round(riskScore * 100),
     riskLevel: transaction.riskLevel || deriveRiskLevel(riskScore),
+    aiRecommendation:
+      transaction.aiRecommendation || getDecisionRecommendation(transaction.status || 'pending'),
     reasonCodes: Array.isArray(transaction.reasonCodes) ? transaction.reasonCodes : [],
     triggeredRules: Array.isArray(transaction.triggeredRules) ? transaction.triggeredRules : [],
     createdAt: transaction.createdAt ? new Date(transaction.createdAt).toISOString() : new Date().toISOString(),
     user,
   };
+};
+
+const notifyAdminsAboutDecision = async ({
+  req,
+  transaction,
+  user,
+  amountNumber,
+  normalizedRecipient,
+  fraudDecision,
+  status,
+  isOffline,
+}) => {
+  const adminUsers = isOffline
+    ? getAllUsers().filter((candidate) => candidate.role === 'admin')
+    : await User.find({ role: 'admin', status: 'active' }).select('_id');
+
+  if (!adminUsers.length) {
+    return;
+  }
+
+  const recommendation = getDecisionRecommendation(status);
+  const summary = getDecisionSummary(status);
+  const actorName = user.name || req.user.name || 'User';
+  const adminMessage = `${actorName} submitted Rs. ${amountNumber.toLocaleString('en-IN')} to ${normalizedRecipient}. ${summary}. Recommendation: ${recommendation}. Risk score ${fraudDecision.riskScorePercent}%.`;
+
+  await Promise.all(
+    adminUsers.map((adminUser) =>
+      createNotification({
+        user: String(adminUser._id || adminUser.id),
+        relatedTransaction: transaction._id,
+        type: getDecisionType(status),
+        title: 'AI Transaction Decision',
+        message: adminMessage,
+      })
+    )
+  );
 };
 
 const topUpTestBalanceIfNeeded = async ({ req, user, accountId, amountNumber, isOffline }) => {
@@ -104,27 +173,47 @@ const topUpTestBalanceIfNeeded = async ({ req, user, accountId, amountNumber, is
 exports.getUserTransactions = async (req, res) => {
   try {
     const { accountId } = req.query;
-    const sessionUserId = resolveSessionUserId(req);
+    let sessionUserId = resolveSessionUserId(req);
+
+    console.log('--- GET USER TRANSACTIONS ---');
+    console.log('Query AccountId:', accountId);
+    console.log('Session UserId:', sessionUserId);
+    console.log('Is Connected:', connectDB.isConnected());
+
+    // Handle string comparison for demo store
+    const userIdStr = String(sessionUserId);
 
     if (!connectDB.isConnected() || isDemoSession(req)) {
+      console.log('Using Demo Store for transactions');
       const transactions = getTransactions()
-        .filter((item) => item.user === sessionUserId && (!accountId || item.accountId === accountId))
+        .filter((item) => {
+          const itemUserId = String(item.user);
+          const userMatch = itemUserId === userIdStr;
+          
+          if (!accountId || accountId === 'all' || accountId === 'undefined' || accountId === 'null') {
+            return userMatch;
+          }
+          return userMatch && item.accountId === accountId;
+        })
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
         .slice(0, 50)
         .map(transactionToDto);
 
+      console.log('Found demo transactions:', transactions.length);
       return res.json(transactions);
     }
 
     const filter = { user: sessionUserId };
-    if (accountId) {
+    if (accountId && accountId !== 'all' && accountId !== 'undefined' && accountId !== 'null') {
       filter.accountId = accountId;
     }
 
+    console.log('Database filter:', JSON.stringify(filter));
     const transactions = await Transaction.find(filter)
       .sort({ createdAt: -1 })
       .limit(50);
 
+    console.log('Found database transactions:', transactions.length);
     res.json(transactions.map(transactionToDto));
   } catch (error) {
     console.error('Error retrieving transactions:', error);
@@ -333,13 +422,13 @@ exports.createTransaction = async (req, res) => {
 
     const newTransaction = isOffline
       ? addTransaction({
-          user: sessionUserId,
+          user: String(sessionUserId),
           userDetails: {
             _id: user._id,
             name: user.name,
             email: user.email,
           },
-          accountId: accountId || undefined,
+          accountId: (accountId && accountId !== 'undefined' && accountId !== 'null') ? accountId : undefined,
           amount: amountNumber,
           transactionType: normalizedTransactionType,
           recipient: normalizedRecipient,
@@ -354,7 +443,7 @@ exports.createTransaction = async (req, res) => {
         })
       : await Transaction.create({
           user: sessionUserId,
-          accountId: accountId || undefined,
+          accountId: (accountId && accountId !== 'undefined' && accountId !== 'null') ? accountId : undefined,
           amount: amountNumber,
           transactionType: normalizedTransactionType,
           recipient: normalizedRecipient,
@@ -386,6 +475,7 @@ exports.createTransaction = async (req, res) => {
       }
     }
 
+    const recommendation = getDecisionRecommendation(status);
     const decisionLabel =
       status === 'blocked'
         ? 'blocked by fraud engine'
@@ -396,9 +486,20 @@ exports.createTransaction = async (req, res) => {
     await createNotification({
       user: sessionUserId,
       relatedTransaction: newTransaction._id,
-      type: status === 'blocked' ? 'error' : status === 'flagged' ? 'warning' : 'success',
+      type: getDecisionType(status),
       title: `Transaction ${status}`,
       message: `Your payment to ${normalizedRecipient} for Rs. ${amountNumber.toLocaleString('en-IN')} was ${decisionLabel}.`,
+    });
+
+    await notifyAdminsAboutDecision({
+      req,
+      transaction: newTransaction,
+      user,
+      amountNumber,
+      normalizedRecipient,
+      fraudDecision,
+      status,
+      isOffline,
     });
 
     await createAuditLog({
@@ -428,6 +529,7 @@ exports.createTransaction = async (req, res) => {
         riskScore,
         riskScorePercent: fraudDecision.riskScorePercent,
         riskLevel: fraudDecision.riskLevel,
+        recommendation,
         reasonCodes: fraudDecision.reasonCodes,
         reasons: fraudDecision.reasons,
         triggeredRules: fraudDecision.triggeredRules,
@@ -505,3 +607,58 @@ exports.raiseDispute = async (req, res) => {
     res.status(500).json({ message: 'Failed to raise dispute', error: error.message });
   }
 };
+
+exports.deleteTransaction = async (req, res) => {
+  try {
+    const { transactionId } = req.params;
+    if (!connectDB.isConnected()) {
+      const success = deleteFromDemoStore(transactionId);
+      return res.status(200).json({ success, message: success ? 'Transaction deleted' : 'Not found' });
+    }
+    await Transaction.findByIdAndDelete(transactionId);
+    res.status(200).json({ success: true, message: 'Transaction deleted' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Delete failed' });
+  }
+};
+
+exports.deleteAllTransactions = async (req, res) => {
+  try {
+    if (!connectDB.isConnected()) {
+      clearAllTransactions();
+      return res.status(200).json({ success: true, message: 'All transactions cleared' });
+    }
+    await Transaction.deleteMany({});
+    res.status(200).json({ success: true, message: 'Database cleared' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Bulk delete failed' });
+  }
+};
+
+exports.recoverAllTransactions = async (req, res) => {
+  try {
+    if (!connectDB.isConnected()) {
+      const transactions = getTransactions().map(txn => updateTransaction(txn._id, { status: 'approved' }));
+      return res.status(200).json({ success: true, count: transactions.length });
+    }
+    const result = await Transaction.updateMany({}, { status: 'approved' });
+    res.status(200).json({ success: true, message: `${result.modifiedCount} transactions recovered` });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Bulk recovery failed' });
+  }
+};
+
+exports.recoverTransaction = async (req, res) => {
+  try {
+    const { transactionId } = req.params;
+    if (!connectDB.isConnected()) {
+      const transaction = updateTransaction(transactionId, { status: 'approved' });
+      return res.status(200).json({ success: !!transaction, transaction: transactionToDto(transaction) });
+    }
+    const transaction = await Transaction.findByIdAndUpdate(transactionId, { status: 'approved' }, { new: true });
+    res.status(200).json({ success: !!transaction, transaction: transactionToDto(transaction) });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Recovery failed' });
+  }
+};
+

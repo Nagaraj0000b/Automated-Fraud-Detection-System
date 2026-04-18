@@ -279,3 +279,51 @@ exports.getRecentUsers = async (req, res) => {
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
+
+exports.getAnalystStats = async (req, res) => {
+  try {
+    if (!connectDB.isConnected()) {
+      const transactions = getTransactions();
+      const flagged = transactions.filter(t => ['flagged', 'blocked'].includes(t.status));
+      
+      return res.status(200).json({
+        success: true,
+        stats: {
+          totalFlagged: flagged.filter(t => t.status === 'flagged').length,
+          totalBlocked: flagged.filter(t => t.status === 'blocked').length,
+          avgRiskScore: transactions.length 
+            ? Math.round((transactions.reduce((s, t) => s + (t.riskScore || 0), 0) / transactions.length) * 100)
+            : 0,
+          topRiskTypes: [
+            { type: 'Large Amount', count: flagged.filter(t => t.amount > 50000).length },
+            { type: 'Location Anomaly', count: flagged.filter(t => t.location?.includes(',')).length }
+          ]
+        }
+      });
+    }
+
+    const [flaggedCount, blockedCount, allTx] = await Promise.all([
+      Transaction.countDocuments({ status: 'flagged' }),
+      Transaction.countDocuments({ status: 'blocked' }),
+      Transaction.find({}).select('riskScore status')
+    ]);
+
+    const avgRisk = allTx.length 
+      ? allTx.reduce((s, t) => s + (t.riskScore || 0), 0) / allTx.length
+      : 0;
+
+    res.status(200).json({
+      success: true,
+      stats: {
+        totalFlagged: flaggedCount,
+        totalBlocked: blockedCount,
+        avgRiskScore: Math.round(avgRisk * 100),
+        activeAnalysts: await User.countDocuments({ role: 'analyst', status: 'active' })
+      }
+    });
+  } catch (error) {
+    console.error('Analyst stats error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+

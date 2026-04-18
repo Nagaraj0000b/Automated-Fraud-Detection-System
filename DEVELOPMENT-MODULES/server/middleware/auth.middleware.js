@@ -55,6 +55,15 @@ exports.verifyToken = (req, res, next) => {
     }
 
     try {
+      const connectDB = require('../config/database');
+      if (!connectDB.isConnected()) {
+        req.user = {
+          ...decoded,
+          status: 'active'
+        };
+        return next();
+      }
+
       // Fetch the latest user data to check status
       const user = await User.findById(decoded.userId || decoded.id);
       

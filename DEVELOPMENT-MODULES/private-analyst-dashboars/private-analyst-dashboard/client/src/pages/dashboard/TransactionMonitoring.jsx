@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Search, Filter, ArrowUpDown, Loader2, MoreVertical, CheckCircle, XCircle, AlertTriangle, UserX } from "lucide-react";
 import { transactionAPI, userAPI } from '@/services/api';
+import { getDecisionRecommendation, getDecisionTone } from '@/lib/adminDecision';
 
 export default function TransactionMonitoring() {
     const [transactions, setTransactions] = useState([]);
@@ -151,20 +152,21 @@ export default function TransactionMonitoring() {
                                     <th className="px-6 py-3 font-medium">Amount</th>
                                     <th className="px-6 py-3 font-medium">Status</th>
                                     <th className="px-6 py-3 font-medium">Risk Score</th>
+                                    <th className="px-6 py-3 font-medium">AI Recommendation</th>
                                     <th className="px-6 py-3 font-medium">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-50">
                                 {loading && transactions.length === 0 ? (
                                     <tr>
-                                        <td colSpan="7" className="px-6 py-12 text-center">
+                                        <td colSpan="8" className="px-6 py-12 text-center">
                                             <Loader2 className="w-8 h-8 animate-spin text-blue-500 mx-auto" />
                                             <p className="mt-2 text-slate-500">Loading transactions...</p>
                                         </td>
                                     </tr>
                                 ) : transactions.length === 0 ? (
                                     <tr>
-                                        <td colSpan="7" className="px-6 py-12 text-center text-slate-500">
+                                        <td colSpan="8" className="px-6 py-12 text-center text-slate-500">
                                             No transactions found matching your criteria.
                                         </td>
                                     </tr>
@@ -194,6 +196,11 @@ export default function TransactionMonitoring() {
                                             <td className="px-6 py-4">
                                                 <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getRiskStyle(txn.riskScore)}`}>
                                                     {(txn.riskScore * 100).toFixed(1)}%
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${getDecisionTone(txn.status)}`}>
+                                                    {txn.aiRecommendation || getDecisionRecommendation(txn.status)}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 relative">

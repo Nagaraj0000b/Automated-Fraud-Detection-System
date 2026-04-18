@@ -10,6 +10,8 @@ const {
   addTransaction,
   getTransactions,
   updateTransaction,
+  deleteTransaction,
+  clearAllTransactions,
 } = require('../services/demoStore');
 
 const TEST_TOP_UP_BALANCE = 1000000;
@@ -17,7 +19,10 @@ const ALLOWED_TRANSACTION_TYPES = ['deposit', 'withdrawal', 'transfer', 'payment
 
 const isInternalTestUser = (req, user) =>
   ['admin', 'analyst'].includes(req.user?.role);
-const resolveSessionUserId = (req) => req.user?.userId || req.user?.id || '';
+const resolveSessionUserId = (req) => {
+  const id = req.user?.userId || req.user?.id || req.user?._id || '';
+  return String(id).trim();
+};
 const isDemoSession = (req) => {
   const sessionUserId = resolveSessionUserId(req);
   return (
@@ -34,6 +39,16 @@ const deriveRiskLevel = (riskScore = 0) => {
   if (riskScore >= 0.45) return 'MEDIUM_RISK';
   return 'LOW_RISK';
 };
+
+const getDecisionRecommendation = (status) => {
+  switch (status) {
+    case 'approved': return 'No action required';
+    case 'flagged': return 'Needs manual review';
+    case 'blocked': return 'High risk - Suspended';
+    default: return 'Monitoring';
+  }
+};
+
 const transactionToDto = (transaction) => {
   if (!transaction) return null;
 
@@ -41,8 +56,8 @@ const transactionToDto = (transaction) => {
   const user =
     rawUser && typeof rawUser === 'object'
       ? {
-          id: String(rawUser._id || rawUser.id || ''),
-          name: rawUser.name || 'Unknown User',
+          id: String(rawUser._id || rawUser.id || (rawUser instanceof mongoose.Types.ObjectId ? rawUser : '')),
+          name: rawUser.name || 'User',
           email: rawUser.email || '',
         }
       : null;
@@ -67,6 +82,7 @@ const transactionToDto = (transaction) => {
         ? Number(transaction.riskScorePercent || 0)
         : Math.round(riskScore * 100),
     riskLevel: transaction.riskLevel || deriveRiskLevel(riskScore),
+    aiRecommendation: transaction.aiRecommendation || getDecisionRecommendation(transaction.status || 'pending'),
     reasonCodes: Array.isArray(transaction.reasonCodes) ? transaction.reasonCodes : [],
     triggeredRules: Array.isArray(transaction.triggeredRules) ? transaction.triggeredRules : [],
     createdAt: transaction.createdAt ? new Date(transaction.createdAt).toISOString() : new Date().toISOString(),
@@ -116,8 +132,16 @@ exports.getUserTransactions = async (req, res) => {
       return res.json(transactions);
     }
 
-    const filter = { user: sessionUserId };
-    if (accountId) {
+    const filter = {};
+    
+    // Explicitly cast to ObjectId if possible to avoid query mismatches
+    if (mongoose.Types.ObjectId.isValid(sessionUserId)) {
+        filter.user = new mongoose.Types.ObjectId(sessionUserId);
+    } else {
+        filter.user = sessionUserId;
+    }
+
+    if (accountId && accountId !== 'all' && accountId !== 'undefined' && accountId !== 'null') {
       filter.accountId = accountId;
     }
 
@@ -331,6 +355,8 @@ exports.createTransaction = async (req, res) => {
     const status = fraudDecision.recommendedStatus;
     const riskScore = fraudDecision.riskScore;
 
+    const safeAccountId = (accountId && accountId !== 'undefined' && accountId !== 'null') ? accountId : undefined;
+    
     const newTransaction = isOffline
       ? addTransaction({
           user: sessionUserId,
@@ -339,7 +365,7 @@ exports.createTransaction = async (req, res) => {
             name: user.name,
             email: user.email,
           },
-          accountId: accountId || undefined,
+          accountId: safeAccountId,
           amount: amountNumber,
           transactionType: normalizedTransactionType,
           recipient: normalizedRecipient,
@@ -354,7 +380,7 @@ exports.createTransaction = async (req, res) => {
         })
       : await Transaction.create({
           user: sessionUserId,
-          accountId: accountId || undefined,
+          accountId: safeAccountId,
           amount: amountNumber,
           transactionType: normalizedTransactionType,
           recipient: normalizedRecipient,
@@ -384,6 +410,20 @@ exports.createTransaction = async (req, res) => {
       } else {
         await User.findByIdAndUpdate(sessionUserId, { $inc: { accountBalance: -amountNumber } });
       }
+    } else if (fraudDecision.riskScorePercent >= 90) {
+        // ✅ NAYA — Automaticaly suspend account if very high risk fraud is blocked
+        if (isOffline) {
+          user.status = 'suspended';
+        } else {
+          await User.findByIdAndUpdate(sessionUserId, { status: 'suspended' });
+        }
+        
+        await createNotification({
+          user: sessionUserId,
+          type: 'error',
+          title: 'Account Suspended',
+          message: 'Your account has been suspended due to suspicious high-risk activity detected by AI.',
+        });
     }
 
     const decisionLabel =
@@ -443,6 +483,88 @@ exports.createTransaction = async (req, res) => {
   } catch (error) {
     console.error('Create transaction error:', error);
     res.status(500).json({ success: false, message: 'Transaction failed', error: error.message });
+  }
+};
+
+exports.deleteTransaction = async (req, res) => {
+  try {
+    const { transactionId } = req.params;
+
+    if (!connectDB.isConnected()) {
+      const deleted = deleteTransaction(transactionId);
+      if (!deleted) {
+        return res.status(404).json({ success: false, message: 'Transaction not found' });
+      }
+      return res.status(200).json({ success: true, message: 'Transaction deleted from demo store' });
+    }
+
+    const result = await Transaction.findByIdAndDelete(transactionId);
+    if (!result) {
+      return res.status(404).json({ success: false, message: 'Transaction not found' });
+    }
+
+    res.status(200).json({ success: true, message: 'Transaction deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting transaction:', error);
+    res.status(500).json({ success: false, message: 'Server error during deletion' });
+  }
+};
+
+exports.deleteAllTransactions = async (req, res) => {
+  try {
+    if (!connectDB.isConnected()) {
+      clearAllTransactions();
+      return res.status(200).json({ success: true, message: 'All transactions cleared from demo store' });
+    }
+
+    await Transaction.deleteMany({});
+    res.status(200).json({ success: true, message: 'All transactions deleted from database' });
+  } catch (error) {
+    console.error('Error deleting all transactions:', error);
+    res.status(500).json({ success: false, message: 'Server error during bulk deletion' });
+  }
+};
+
+exports.recoverTransaction = async (req, res) => {
+  try {
+    const { transactionId } = req.params;
+    const update = { status: 'approved' };
+
+    if (!connectDB.isConnected()) {
+      const transaction = updateTransaction(transactionId, update);
+      if (!transaction) {
+        return res.status(404).json({ success: false, message: 'Transaction not found' });
+      }
+      return res.status(200).json({ success: true, transaction: transactionToDto(transaction), message: 'Transaction recovered' });
+    }
+
+    const transaction = await Transaction.findByIdAndUpdate(transactionId, update, { new: true });
+    if (!transaction) {
+      return res.status(404).json({ success: false, message: 'Transaction not found' });
+    }
+
+    res.status(200).json({ success: true, transaction: transactionToDto(transaction), message: 'Transaction status set to approved' });
+  } catch (error) {
+    console.error('Error recovering transaction:', error);
+    res.status(500).json({ success: false, message: 'Server error during recovery' });
+  }
+};
+
+exports.recoverAllTransactions = async (req, res) => {
+  try {
+    const update = { status: 'approved' };
+
+    if (!connectDB.isConnected()) {
+      const transactions = getTransactions();
+      transactions.forEach(t => t.status = 'approved');
+      return res.status(200).json({ success: true, message: 'All transactions recovered in demo store' });
+    }
+
+    await Transaction.updateMany({}, update);
+    res.status(200).json({ success: true, message: 'All transactions set to approved' });
+  } catch (error) {
+    console.error('Error recovering all transactions:', error);
+    res.status(500).json({ success: false, message: 'Server error during bulk recovery' });
   }
 };
 

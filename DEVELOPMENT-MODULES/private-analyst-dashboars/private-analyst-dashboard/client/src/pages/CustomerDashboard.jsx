@@ -24,6 +24,7 @@ const CustomerDashboard = () => {
   const [showAddAccountModal, setShowAddAccountModal] = useState(false);
   const [newAccountBankName, setNewAccountBankName] = useState("");
   const [showBankList, setShowBankList] = useState(false);
+  const [transactionsLoading, setTransactionsLoading] = useState(false);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
@@ -72,10 +73,24 @@ const CustomerDashboard = () => {
 
   const fetchHistory = async (accountId) => {
     try {
+      console.log('Fetching history for account:', accountId);
+      setTransactionsLoading(true);
       const data = await transactionAPI.getMyTransactions(accountId);
-      setTransactions(data);
+      console.log('Received transactions:', data);
+      setTransactions(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Failed to load transactions", error);
+      setTransactions([]);
+    } finally {
+      setTransactionsLoading(false);
+    }
+  };
+
+  const handleRefresh = () => {
+    if (selectedAccountId) {
+      fetchHistory(selectedAccountId);
+    } else {
+      initializeAccountsFromBackend();
     }
   };
 
@@ -317,6 +332,16 @@ const CustomerDashboard = () => {
                 </div>
               )}
               <div className="flex items-center gap-2 justify-end">
+                <button
+                  onClick={handleRefresh}
+                  disabled={transactionsLoading}
+                  className="p-2 text-white/50 hover:text-white bg-white/5 hover:bg-white/10 rounded-lg transition-all border border-white/10"
+                  title="Refresh data"
+                >
+                  <svg className={`w-4 h-4 ${transactionsLoading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                </button>
                 <button
                   type="button"
                   onClick={() => navigate('/make-payment')}

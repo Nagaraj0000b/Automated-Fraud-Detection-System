@@ -1,10 +1,21 @@
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const { createAuditLog } = require('./audit.controller');
+const connectDB = require('../config/database');
+const { getAllUsers: getDemoUsers } = require('../services/demoStore');
 
 // GET /api/users — List all users (admin only)
 exports.getAllUsers = async (req, res) => {
     try {
+        if (!connectDB.isConnected()) {
+            const demoUsers = getDemoUsers().filter(u => u.role !== 'system');
+            return res.status(200).json({
+                success: true,
+                count: demoUsers.length,
+                users: demoUsers
+            });
+        }
+
         const users = await User.find()
             .select('-password')
             .sort({ createdAt: -1 });

@@ -55,7 +55,14 @@ app.get('/api/health', (req, res) => {
   });
 });
 const startServer = async () => {
-  await connectDB();
+  try {
+    await connectDB();
+    console.log('✅ Database connected');
+  } catch (error) {
+    console.error('❌ Database connection failed:', error.message);
+    console.log('⚠️  Starting in OFFLINE/DEMO mode...');
+  }
+
   app.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
     console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
@@ -67,7 +74,4 @@ const startServer = async () => {
     console.log(`🔑 GitHub OAuth: ${githubConfigured ? '✅ Configured' : '❌ Not configured'}`);
   });
 };
-startServer().catch((error) => {
-  console.error('Server startup failed:', error.message);
-  process.exit(1);
-});
+startServer();

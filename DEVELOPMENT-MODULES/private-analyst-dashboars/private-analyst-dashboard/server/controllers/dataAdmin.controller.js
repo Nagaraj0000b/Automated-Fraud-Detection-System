@@ -325,3 +325,55 @@ exports.normalizeTransactions = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Failed to normalize transactions.' });
   }
 };
+
+// ✅ NAYA — Transaction Approve
+exports.approveTransaction = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!connectDB.isConnected()) {
+      const tx = store.transactions.find((t) => t._id === id);
+      if (!tx) return res.status(404).json({ success: false, message: 'Transaction not found.' });
+      tx.status = 'approved';
+      return res.status(200).json({ success: true, transaction: tx });
+    }
+
+    const tx = await Transaction.findByIdAndUpdate(
+      id,
+      { status: 'approved' },
+      { new: true }
+    );
+    if (!tx) return res.status(404).json({ success: false, message: 'Transaction not found.' });
+
+    return res.status(200).json({ success: true, transaction: tx });
+  } catch (error) {
+    console.error('Approve transaction error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to approve transaction.' });
+  }
+};
+
+// ✅ NAYA — Transaction Block
+exports.blockTransaction = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!connectDB.isConnected()) {
+      const tx = store.transactions.find((t) => t._id === id);
+      if (!tx) return res.status(404).json({ success: false, message: 'Transaction not found.' });
+      tx.status = 'blocked';
+      return res.status(200).json({ success: true, transaction: tx });
+    }
+
+    const tx = await Transaction.findByIdAndUpdate(
+      id,
+      { status: 'blocked' },
+      { new: true }
+    );
+    if (!tx) return res.status(404).json({ success: false, message: 'Transaction not found.' });
+
+    return res.status(200).json({ success: true, transaction: tx });
+  } catch (error) {
+    console.error('Block transaction error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to block transaction.' });
+  }
+};

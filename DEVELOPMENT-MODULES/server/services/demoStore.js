@@ -1,6 +1,23 @@
 const store = {
   users: new Map(),
-  transactions: [],
+  transactions: [
+    {
+      _id: 'txn-demo-1',
+      user: 'u1', // this will be updated or ignored
+      accountId: 'acc-demo-1',
+      amount: 1500,
+      transactionType: 'transfer',
+      recipient: 'Amazon',
+      description: 'Online Purchase',
+      location: 'Mumbai, IN',
+      status: 'approved',
+      disputeStatus: 'none',
+      disputeReason: '',
+      riskScore: 0.1,
+      riskLevel: 'LOW_RISK',
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
+    }
+  ],
   notifications: [],
   rules: [],
   models: [
@@ -75,6 +92,18 @@ const updateTransaction = (transactionId, updates) => {
 
 const getTransactions = () => store.transactions;
 
+const deleteTransaction = (transactionId) => {
+  const index = store.transactions.findIndex((item) => item._id === transactionId);
+  if (index === -1) return false;
+  store.transactions.splice(index, 1);
+  return true;
+};
+
+const clearAllTransactions = () => {
+  store.transactions = [];
+  return true;
+};
+
 const addNotification = (notification) => {
   const newNotification = {
     _id: makeId('noti'),
@@ -105,6 +134,8 @@ module.exports = {
   addTransaction,
   updateTransaction,
   getTransactions,
+  deleteTransaction,
+  clearAllTransactions,
   addNotification,
   getNotificationsForUser,
   markNotificationAsRead,

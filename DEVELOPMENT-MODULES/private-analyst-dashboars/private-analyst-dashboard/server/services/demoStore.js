@@ -98,6 +98,18 @@ const markNotificationAsRead = (notificationId, userId) => {
   return notification;
 };
 
+const deleteTransaction = (transactionId) => {
+  const index = store.transactions.findIndex((item) => item._id === transactionId);
+  if (index === -1) return false;
+  store.transactions.splice(index, 1);
+  return true;
+};
+
+const clearAllTransactions = () => {
+  store.transactions = [];
+  return true;
+};
+
 module.exports = {
   store,
   ensureUser,
@@ -105,6 +117,8 @@ module.exports = {
   addTransaction,
   updateTransaction,
   getTransactions,
+  deleteTransaction,
+  clearAllTransactions,
   addNotification,
   getNotificationsForUser,
   markNotificationAsRead,

@@ -1,130 +1,95 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2 } from "lucide-react";
-import { alertAPI, dashboardAPI } from '@/services/api';
-
-const riskColors = {
-  Critical: 'bg-red-100 text-red-700 border border-red-200',
-  High: 'bg-orange-100 text-orange-700 border border-orange-200',
-  Medium: 'bg-yellow-100 text-yellow-700 border border-yellow-200',
-  Low: 'bg-green-100 text-green-700 border border-green-200',
-};
+import { useEffect, useState } from 'react';
+import RecentSignups from '@/components/admin/RecentSignups';
+import StatsCards from '@/components/admin/StatsCards';
+import UsersByRole from '@/components/admin/UsersByRole';
+import { dashboardAPI, notificationAPI } from '@/services/api';
 
 export default function DashboardOverviewReal() {
   const [stats, setStats] = useState(null);
-  const [alertStats, setAlertStats] = useState(null);
-  const [recentAlerts, setRecentAlerts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  const fetchDashboardData = useCallback(async () => {
-    try {
-      setLoading(true);
-
-      const [statsRes, alertStatsRes, recentAlertsRes] = await Promise.all([
-        dashboardAPI.getStats(),
-        alertAPI.getStats(),
-        alertAPI.getRecent(),
-      ]);
-
-      setStats(statsRes.stats || null);
-      setAlertStats(alertStatsRes.stats || null);
-      setRecentAlerts(recentAlertsRes.alerts || []);
-      setError('');
-    } catch (err) {
-      console.error(err);
-      setError(err.response?.data?.message || 'Failed to load dashboard data');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const [recentUsers, setRecentUsers] = useState([]);
+  const [notificationSummary, setNotificationSummary] = useState({
+    unread: 0,
+    latest: 'No new AI decisions in the queue.',
+  });
 
   useEffect(() => {
-    fetchDashboardData();
-  }, [fetchDashboardData]);
+    let isMounted = true;
 
-  if (loading) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-        <span className="ml-2 text-slate-500">Loading dashboard...</span>
-      </div>
-    );
-  }
+    const loadOverview = async () => {
+      try {
+        const [statsResponse, recentUsersResponse, notificationsResponse] = await Promise.all([
+          dashboardAPI.getStats(),
+          dashboardAPI.getRecentUsers(),
+          notificationAPI.getMyNotifications(),
+        ]);
 
-  if (error) {
-    return <div className="rounded-xl bg-red-50 p-4 text-red-500">{error}</div>;
-  }
+        if (!isMounted) return;
+
+        const dashboardStats = statsResponse.stats || null;
+        const notifications = notificationsResponse.notifications || [];
+        const latestNotification = notifications[0];
+
+        setStats(dashboardStats);
+        setRecentUsers(
+          (recentUsersResponse.users || []).map((user) => ({
+            initial: user.name?.slice(0, 1)?.toUpperCase() || 'U',
+            name: user.name || 'Unknown User',
+            email: user.email || '',
+            role: (user.role || 'user').replace(/^./, (char) => char.toUpperCase()),
+          }))
+        );
+        setNotificationSummary({
+          unread: notifications.filter((item) => !item.read).length,
+          latest: latestNotification?.message || 'No new AI decisions in the queue.',
+        });
+      } catch (error) {
+        console.error('Failed to load admin overview', error);
+      }
+    };
+
+    loadOverview();
+    const interval = setInterval(loadOverview, 10000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
+  const roles =
+    stats?.users?.byRole?.map((item) => ({
+      name: item._id ? item._id.charAt(0).toUpperCase() + item._id.slice(1) : 'Unknown',
+      count: item.count,
+    })) || undefined;
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">Dashboard Overview</h2>
-          <p className="text-sm text-slate-500">Live fraud, transaction, and model summary</p>
+      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <h2 className="text-2xl font-semibold tracking-tight text-slate-950">Dashboard Overview</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Welcome back. Here is what&apos;s happening today.
+            </p>
+          </div>
+          <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 lg:max-w-md">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-700">
+              AI Decision Feed
+            </p>
+            <p className="mt-2 text-sm text-slate-700">{notificationSummary.latest}</p>
+            <p className="mt-2 text-xs text-blue-700">
+              {notificationSummary.unread} unread admin notification{notificationSummary.unread === 1 ? '' : 's'}
+            </p>
+          </div>
         </div>
+      </section>
+
+      <StatsCards stats={stats} />
+
+      <div className="grid gap-4 xl:grid-cols-2">
+        <UsersByRole roles={roles} />
+        <RecentSignups signups={recentUsers.length ? recentUsers : undefined} />
       </div>
-
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-sm text-slate-500">Fraud Detected</p>
-            <h2 className="mt-2 text-3xl font-bold">{alertStats?.totalFraudDetected || 0}</h2>
-            <p className="mt-2 text-xs text-slate-400">{alertStats?.weekChange || 0}% vs previous week</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-sm text-slate-500">Total Transactions</p>
-            <h2 className="mt-2 text-3xl font-bold">{stats?.transactions?.total24h || 0}</h2>
-            <p className="mt-2 text-xs text-slate-400">{stats?.transactions?.dayChange || 0}% in last 24h</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-sm text-slate-500">Avg Risk</p>
-            <h2 className="mt-2 text-3xl font-bold">{alertStats?.avgRiskScore || 0}</h2>
-            <p className="mt-2 text-xs text-slate-400">{stats?.transactions?.flagged24h || 0} flagged today</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-sm text-slate-500">Model Accuracy</p>
-            <h2 className="mt-2 text-3xl font-bold">{stats?.models?.avgAccuracy || 0}%</h2>
-            <p className="mt-2 text-xs text-slate-400">{stats?.riskRules?.activeRules || 0} active rules</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Alerts</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {recentAlerts.length > 0 ? (
-            <div className="space-y-3">
-              {recentAlerts.map((alert) => (
-                <div key={alert._id} className="flex flex-col gap-3 rounded-xl border border-slate-100 p-4 md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <p className="font-semibold text-indigo-600">{alert.alertId}</p>
-                    <p className="text-sm text-slate-500">{alert.user?.email || 'Unknown user'}</p>
-                  </div>
-                  <div className="font-semibold text-slate-800">Rs. {Number(alert.amount || 0).toLocaleString('en-IN')}</div>
-                  <div className="text-sm text-slate-500">{alert.type}</div>
-                  <span className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-medium ${riskColors[alert.riskLevel] || riskColors.Low}`}>
-                    {alert.riskLevel}
-                  </span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-slate-500">No alerts detected.</p>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 }

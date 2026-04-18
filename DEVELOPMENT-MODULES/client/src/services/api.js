@@ -89,6 +89,22 @@ export const transactionAPI = {
     const response = await api.post(`/transactions/${transactionId}/dispute`, { reason });
     return response.data;
   },
+  delete: async (id) => {
+    const response = await api.delete(`/transactions/${id}`);
+    return response.data;
+  },
+  deleteAll: async () => {
+    const response = await api.delete('/transactions/all');
+    return response.data;
+  },
+  recover: async (id) => {
+    const response = await api.patch(`/transactions/${id}/recover`);
+    return response.data;
+  },
+  recoverAll: async () => {
+    const response = await api.patch('/transactions/recover-all');
+    return response.data;
+  },
 };
 
 // ─── FRAUD ALERTS (NEW) ───────────────────────────────────────────────────────

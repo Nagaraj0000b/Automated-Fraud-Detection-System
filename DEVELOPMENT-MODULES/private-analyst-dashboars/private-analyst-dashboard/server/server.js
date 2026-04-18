@@ -25,10 +25,11 @@ const authController = require('./controllers/auth.controller');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:3000';
 
 // Middleware
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:3000',
+  origin: CLIENT_URL,
   credentials: true
 }));
 app.use(express.json());
@@ -58,6 +59,11 @@ app.use('/api/ml', mlRoutes);
 // OAuth failure route
 app.get('/oauth-failed', authController.oauthFailure);
 
+// Redirect browser hits on backend /signin to frontend route
+app.get('/signin', (req, res) => {
+  res.redirect(`${CLIENT_URL}/signin`);
+});
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
@@ -76,7 +82,12 @@ app.get('/api/health', (req, res) => {
 });
 
 const startServer = async () => {
-  await connectDB();
+  try {
+    await connectDB();
+  } catch (error) {
+    // Keep API available in offline mode (demo credentials + health endpoint).
+    console.warn('⚠️ Starting server without database connection.');
+  }
 
   app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);

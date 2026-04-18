@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { accountAPI, transactionAPI } from '../services/api';
+import { getDecisionTone } from '../lib/adminDecision';
 
 const MakePayment = () => {
   const navigate = useNavigate();
@@ -10,6 +11,7 @@ const MakePayment = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [decision, setDecision] = useState(null);
   const [locationDetecting, setLocationDetecting] = useState(false);
 
   const buildFallbackAccount = () => {
@@ -76,12 +78,14 @@ const MakePayment = () => {
     setForm((prev) => ({ ...prev, [name]: value }));
     setError('');
     setSuccess('');
+    setDecision(null);
   };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError('');
     setSuccess('');
+    setDecision(null);
 
     const amountNumber = parseFloat(form.amount);
 
@@ -117,6 +121,7 @@ const MakePayment = () => {
         accountId: selectedAccountId,
       });
       setSuccess(response.message || 'Payment processed successfully.');
+      setDecision(response.decision || null);
       setForm({ amount: '', recipient: '', description: '', location: '' });
     } catch (submitError) {
       setError(submitError.response?.data?.message || 'Payment failed.');
@@ -135,6 +140,25 @@ const MakePayment = () => {
 
         {error ? <div className="mb-3 text-xs text-rose-300">{error}</div> : null}
         {success ? <div className="mb-3 text-xs text-emerald-300">{success}</div> : null}
+        {decision ? (
+          <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 text-xs text-white/80">
+            <div className="flex items-center justify-between gap-3">
+              <p className="font-semibold text-white">AI Review Result</p>
+              <span className={`rounded-full px-2.5 py-1 font-semibold ${getDecisionTone(decision.status)}`}>
+                {decision.recommendation}
+              </span>
+            </div>
+            <p className="mt-3 text-white/70">
+              Risk score: {decision.riskScorePercent}% • Risk level: {String(decision.riskLevel || '').replace(/_/g, ' ')}
+            </p>
+            {decision.reasons?.length ? (
+              <p className="mt-2 text-white/60">Reason: {decision.reasons[0]}</p>
+            ) : null}
+            <p className="mt-2 text-cyan-300">
+              Admin dashboard has been notified about this transaction decision.
+            </p>
+          </div>
+        ) : null}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

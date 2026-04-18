@@ -10,12 +10,14 @@ import {
   LogOut,
   Search,
   ShieldAlert,
-  Square,
   Play,
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
   RotateCcw,
   Trash2,
 } from 'lucide-react';
-import { alertAPI, dashboardAPI, dataAdminAPI, modelAPI, transactionAPI } from '@/services/api';
+import { alertAPI, dashboardAPI, modelAPI, transactionAPI } from '@/services/api';
 
 const views = [
   { id: 'overview', label: 'Overview', icon: Activity },
@@ -83,12 +85,24 @@ export default function AnalystDashboardRealV2() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [alertSearchTerm, setAlertSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [riskFilter, setRiskFilter] = useState('all');
   const [modelLoadingId, setModelLoadingId] = useState('');
-  const [dataActionLoading, setDataActionLoading] = useState('');
-  const [actionMessage, setActionMessage] = useState('');
+  const [modelsError, setModelsError] = useState('');
   const [mlMetrics, setMlMetrics] = useState(null);
+
+  const filteredAlerts = useMemo(() => {
+    return alerts.filter(alert => {
+      const q = alertSearchTerm.trim().toLowerCase();
+      if (!q) return true;
+      return (
+        (alert.alertId && String(alert.alertId).toLowerCase().includes(q)) ||
+        (alert.user?.email && alert.user.email.toLowerCase().includes(q)) ||
+        (alert.user?.name && alert.user.name.toLowerCase().includes(q))
+      );
+    });
+  }, [alerts, alertSearchTerm]);
 
   const user = useMemo(() => {
     try {
@@ -103,30 +117,41 @@ export default function AnalystDashboardRealV2() {
       if (silent) setRefreshing(true);
       else setLoading(true);
 
-      const [statsRes, alertStatsRes, alertsRes, transactionsRes, modelsRes] = await Promise.all([
+      const [statsRes, alertStatsRes, alertsRes, transactionsRes] = await Promise.all([
         dashboardAPI.getStats(),
         alertAPI.getStats(),
         alertAPI.getAll({ limit: 30 }),
         transactionAPI.getAllTransactions({ limit: 30, page: 1 }),
-        modelAPI.getAll(),
       ]);
+
+      let realModels = [];
+      try {
+        const modelsRes = await modelAPI.getAll();
+        realModels = modelsRes.models || [];
+        setModelsError('');
+      } catch (err) {
+        console.error('Failed to fetch models:', err);
+        setModelsError('Failed to load AI models data. Please check if the endpoint is correct.');
+      }
 
       setDashboardStats(statsRes.stats || null);
       setAlertStats(alertStatsRes.stats || null);
       setAlerts(alertsRes.alerts || []);
       setTransactions(transactionsRes.transactions || []);
-      setModels(modelsRes.models || []);
-
-      try {
-        const mlRes = await fetch(import.meta.env.VITE_API_URL + '/ml/metrics');
-        if (mlRes.ok) {
-          const mlData = await mlRes.json();
-          if (mlData && mlData.accuracy) {
-            setMlMetrics(mlData);
-            setModels(prev => prev.map((m, i) => i === 0 ? Object.assign({}, m, { accuracy: mlData.accuracy, coverage: mlData.coverage, lastTrainedAt: mlData.lastTrained, status: 'active' }) : m));
-          }
-        }
-      } catch (_) {}
+      
+      setModels(realModels);
+      if (realModels[0]) {
+        setMlMetrics({
+          accuracy: realModels[0].accuracy,
+          coverage: realModels[0].coverage,
+          lastTrained: realModels[0].lastTrainedAt,
+          totalSamples: realModels[0].totalSamples,
+          fraudRate: realModels[0].fraudRate,
+          status: realModels[0].status,
+        });
+      } else {
+        setMlMetrics(null);
+      }
       setError('');
     } catch (fetchError) {
       console.error(fetchError);
@@ -188,7 +213,6 @@ export default function AnalystDashboardRealV2() {
     try {
       setModelLoadingId(modelId);
       if (action === 'train') await modelAPI.train(modelId);
-      if (action === 'stop') await modelAPI.stop(modelId);
       await fetchDashboard({ silent: true });
     } catch (actionError) {
       console.error(actionError);
@@ -198,22 +222,86 @@ export default function AnalystDashboardRealV2() {
     }
   };
 
-  const handleDataAction = async (action) => {
+  const handleUpdateTransactionStatus = async (transactionId, newStatus) => {
     try {
-      setDataActionLoading(action);
-      setActionMessage('');
-
-      let response;
-      if (action === 'restore') response = await dataAdminAPI.restoreLatest();
-      if (action === 'clear') response = await dataAdminAPI.clearData();
-
-      setActionMessage(response?.message || 'Action completed successfully.');
-      await fetchDashboard({ silent: true });
-    } catch (actionError) {
-      console.error(actionError);
-      setError(actionError.response?.data?.message || 'Failed to complete data action');
+      setRefreshing(true);
+      const res = await transactionAPI.updateStatus(transactionId, newStatus);
+      if (res.success) {
+        setTransactions(prev => prev.map(txn => 
+          txn._id === transactionId ? { ...txn, status: newStatus } : txn
+        ));
+      }
+    } catch (err) {
+      console.error('Failed to update status:', err);
+      setError('Failed to update transaction status');
     } finally {
-      setDataActionLoading('');
+      setRefreshing(false);
+    }
+  };
+
+  const handleDeleteAllTransactions = async () => {
+    if (!window.confirm('Are you sure you want to delete ALL transactions? This cannot be undone.')) return;
+    try {
+      setRefreshing(true);
+      const res = await transactionAPI.deleteAll();
+      if (res.success) {
+        setTransactions([]);
+        // setStats(prev => ({ ...prev, totalTransactions: 0, flaggedFrauds: 0, blockedCases: 0 }));
+      }
+    } catch (err) {
+      console.error('Failed to delete all transactions:', err);
+      setError('Failed to clear transactions');
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const handleRecoverAllTransactions = async () => {
+    if (!window.confirm('Are you sure you want to approve/recover ALL transactions?')) return;
+    try {
+      setRefreshing(true);
+      const res = await transactionAPI.recoverAll();
+      if (res.success) {
+        setTransactions(prev => prev.map(txn => ({ ...txn, status: 'approved' })));
+      }
+    } catch (err) {
+      console.error('Failed to recover all transactions:', err);
+      setError('Failed to recover transactions');
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const handleDeleteTransaction = async (id) => {
+    if (!window.confirm('Delete this transaction?')) return;
+    try {
+      setRefreshing(true);
+      const res = await transactionAPI.delete(id);
+      if (res.success) {
+        setTransactions(prev => prev.filter(t => t._id !== id));
+      }
+    } catch (err) {
+      console.error('Failed to delete transaction:', err);
+      setError('Failed to delete');
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const handleRecoverTransaction = async (id) => {
+    try {
+      setRefreshing(true);
+      const res = await transactionAPI.recover(id);
+      if (res.success) {
+        setTransactions(prev => prev.map(txn => 
+          txn._id === id ? { ...txn, status: 'approved' } : txn
+        ));
+      }
+    } catch (err) {
+      console.error('Failed to recover transaction:', err);
+      setError('Failed to recover');
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -384,35 +472,8 @@ export default function AnalystDashboardRealV2() {
               </div>
             ) : null}
 
-            {actionMessage ? (
-              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                {actionMessage}
-              </div>
-            ) : null}
-
             {activeView === 'overview' && (
               <>
-                <section className="flex flex-wrap gap-3">
-                  <button
-                    type="button"
-                    onClick={() => handleDataAction('restore')}
-                    disabled={dataActionLoading !== ''}
-                    className="inline-flex items-center gap-2 rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm font-semibold text-indigo-600 transition hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    <RotateCcw className="h-4 w-4" />
-                    {dataActionLoading === 'restore' ? 'Restoring...' : 'Restore Backup'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDataAction('clear')}
-                    disabled={dataActionLoading !== ''}
-                    className="inline-flex items-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    {dataActionLoading === 'clear' ? 'Clearing...' : 'Delete User Data'}
-                  </button>
-                </section>
-
                 <section className="grid gap-4 xl:grid-cols-4 md:grid-cols-2">
                   {overviewCards.map((card) => {
                     const Icon = card.icon;
@@ -461,14 +522,24 @@ export default function AnalystDashboardRealV2() {
 
             {activeView === 'alerts' && (
               <section className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-                <div className="mb-5 flex items-center justify-between">
+                <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h2 className="text-2xl font-black tracking-tight">Fraud Alerts</h2>
                     <p className="text-sm text-slate-500">Only flagged and blocked fraud cases are listed here.</p>
                   </div>
                   <span className="rounded-full bg-slate-100 px-3 py-1 text-sm font-medium text-slate-600">
-                    {alerts.length} alerts
+                    {filteredAlerts.length} alerts
                   </span>
+                </div>
+
+                <div className="mb-5 relative">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <input
+                    value={alertSearchTerm}
+                    onChange={(event) => setAlertSearchTerm(event.target.value)}
+                    placeholder="Search by user or alert id"
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm text-slate-700 outline-none focus:border-indigo-300"
+                  />
                 </div>
 
                 <div className="overflow-x-auto">
@@ -484,7 +555,7 @@ export default function AnalystDashboardRealV2() {
                       </tr>
                     </thead>
                     <tbody>
-                      {alerts.map((alert) => (
+                      {filteredAlerts.map((alert) => (
                         <tr key={alert._id} className="border-b border-slate-100 last:border-b-0">
                           <td className="py-4 font-semibold text-indigo-600">{alert.alertId}</td>
                           <td className="py-4">{alert.user?.email || 'Unknown user'}</td>
@@ -529,9 +600,25 @@ export default function AnalystDashboardRealV2() {
                     <h2 className="text-2xl font-black tracking-tight">Transaction Monitoring</h2>
                     <p className="text-sm text-slate-500">Search and filter system transactions quickly.</p>
                   </div>
-                  <span className="rounded-full bg-slate-100 px-3 py-1 text-sm font-medium text-slate-600">
-                    {filteredTransactions.length} records
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <button 
+                      onClick={handleDeleteAllTransactions}
+                      className="flex items-center px-4 py-1.5 text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 rounded-full transition-colors border border-red-100"
+                    >
+                      <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                      Delete All
+                    </button>
+                    <button 
+                      onClick={handleRecoverAllTransactions}
+                      className="flex items-center px-4 py-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-full transition-colors border border-indigo-100"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+                      Recover All
+                    </button>
+                    <span className="rounded-full bg-slate-100 px-3 py-1 text-sm font-medium text-slate-600">
+                      {filteredTransactions.length} records
+                    </span>
+                  </div>
                 </div>
 
                 <div className="mb-5 grid gap-3 lg:grid-cols-[1.4fr_0.7fr_0.7fr]">
@@ -580,8 +667,10 @@ export default function AnalystDashboardRealV2() {
                         <th className="pb-3 font-medium">User</th>
                         <th className="pb-3 font-medium">Recipient</th>
                         <th className="pb-3 font-medium">Amount</th>
-                        <th className="pb-3 font-medium">Risk</th>
+                         <th className="pb-3 font-medium">Risk</th>
                         <th className="pb-3 font-medium">Status</th>
+                        <th className="pb-3 font-medium">AI Recommendation</th>
+                        {['admin', 'analyst'].includes(user.role) && <th className="pb-3 font-medium text-right">Actions</th>}
                       </tr>
                     </thead>
                     <tbody>
@@ -611,6 +700,57 @@ export default function AnalystDashboardRealV2() {
                                 {transaction.status}
                               </span>
                             </td>
+                            <td className="py-4">
+                              <span className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                                riskScore >= 80 ? 'bg-red-50 text-red-600' : 
+                                riskScore >= 50 ? 'bg-amber-50 text-amber-600' : 
+                                'bg-emerald-50 text-emerald-600'
+                              }`}>
+                                {riskScore >= 80 ? 'Block Recommended' : riskScore >= 50 ? 'Flag for Review' : 'Safe to Approve'}
+                              </span>
+                            </td>
+                            {['admin', 'analyst'].includes(user.role) && (
+                              <td className="py-4 text-right">
+                                <div className="flex justify-end gap-2">
+                                  <button 
+                                    onClick={() => handleUpdateTransactionStatus(transaction._id, 'approved')}
+                                    className="p-1 text-emerald-600 hover:bg-emerald-50 rounded"
+                                    title="Approve"
+                                  >
+                                    <CheckCircle className="h-4 w-4" />
+                                  </button>
+                                  <button 
+                                    onClick={() => handleUpdateTransactionStatus(transaction._id, 'flagged')}
+                                    className="p-1 text-amber-600 hover:bg-amber-50 rounded"
+                                    title="Flag for Review"
+                                  >
+                                    <AlertTriangle className="h-4 w-4" />
+                                  </button>
+                                  <button 
+                                    onClick={() => handleUpdateTransactionStatus(transaction._id, 'blocked')}
+                                    className="p-1 text-red-600 hover:bg-red-50 rounded"
+                                    title="Block"
+                                  >
+                                    <XCircle className="h-4 w-4" />
+                                  </button>
+                                  <div className="w-px h-4 bg-slate-200 mx-1" />
+                                  <button 
+                                    onClick={() => handleRecoverTransaction(transaction._id)}
+                                    className="p-1 text-indigo-600 hover:bg-indigo-50 rounded"
+                                    title="Recover / Approve"
+                                  >
+                                    <RotateCcw className="h-4 w-4" />
+                                  </button>
+                                  <button 
+                                    onClick={() => handleDeleteTransaction(transaction._id)}
+                                    className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded"
+                                    title="Delete"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              </td>
+                            )}
                           </tr>
                         );
                       })}
@@ -622,6 +762,16 @@ export default function AnalystDashboardRealV2() {
 
             {activeView === 'models' && (
               <section className="space-y-4">
+                {modelsError ? (
+                  <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                    {modelsError}
+                  </div>
+                ) : null}
+                {models.length === 0 && !modelsError && !loading && (
+                  <div className="rounded-2xl border border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-500">
+                    No models found.
+                  </div>
+                )}
                 {models.map((model) => (
                   <div key={model.id} className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
                     <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
@@ -651,15 +801,6 @@ export default function AnalystDashboardRealV2() {
                         >
                           {modelLoadingId === model.id && model.status !== 'stopped' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
                           Train
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleModelAction(model.id, 'stop')}
-                          disabled={modelLoadingId === model.id || model.status === 'stopped' || model.status === 'ready'}
-                          className="inline-flex items-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          <Square className="h-4 w-4" />
-                          Stop
                         </button>
                       </div>
                     </div>

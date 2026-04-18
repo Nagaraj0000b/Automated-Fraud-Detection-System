@@ -30,6 +30,19 @@ router.post('/create', transactionController.createTransaction);
 // Get my transaction history
 router.get('/my-transactions', transactionController.getUserTransactions);
 
+// Recover all transactions (Bulk approve)
+router.patch('/recover-all', authorizeAdmin, transactionController.recoverAllTransactions);
+
+// Recover a specific transaction
+router.patch('/:transactionId/recover', authorizeAdmin, transactionController.recoverTransaction);
+
+// Delete all transactions (Admin/Analyst reset)
+router.delete('/all', authorizeAdmin, transactionController.deleteAllTransactions);
+
+// Delete a specific transaction
+router.delete('/:transactionId', authorizeAdmin, transactionController.deleteTransaction);
+
+
 // Raise a dispute
 router.post('/:transactionId/dispute', transactionController.raiseDispute);
 

@@ -23,6 +23,7 @@ const CustomerDashboard = () => {
   const [showAddAccountModal, setShowAddAccountModal] = useState(false);
   const [newAccountBankName, setNewAccountBankName] = useState("");
   const [showBankList, setShowBankList] = useState(false);
+  const [transactionsLoading, setTransactionsLoading] = useState(false);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
@@ -71,10 +72,24 @@ const CustomerDashboard = () => {
 
   const fetchHistory = async (accountId) => {
     try {
+      console.log('Fetching history for account:', accountId);
+      setTransactionsLoading(true);
       const data = await transactionAPI.getMyTransactions(accountId);
-      setTransactions(data);
+      console.log('Received transactions:', data);
+      setTransactions(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Failed to load transactions", error);
+      setTransactions([]);
+    } finally {
+      setTransactionsLoading(false);
+    }
+  };
+
+  const handleRefresh = () => {
+    if (selectedAccountId) {
+      fetchHistory(selectedAccountId);
+    } else {
+      initializeAccountsFromBackend();
     }
   };
 
@@ -317,6 +332,12 @@ const CustomerDashboard = () => {
                 >
                   <span className="text-base leading-none">＋</span>
                   <span>Add Account</span>
+                </button>
+                <button
+                  onClick={handleRefresh}
+                  className="text-xs font-medium text-blue-300 hover:text-blue-200 underline mr-2"
+                >
+                  Refresh
                 </button>
                 {activeTab === 'transactions' && (
                   <button
