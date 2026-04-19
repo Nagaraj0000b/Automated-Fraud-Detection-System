@@ -80,6 +80,11 @@ const transactionToDto = (transaction) => {
 
   const riskScore = Number(transaction.riskScore || 0);
 
+  const status = transaction.status || 'pending';
+  const baseRecommendation = getDecisionRecommendation(status);
+  const reasons = Array.isArray(transaction.reasons) ? transaction.reasons : [];
+  const reasonString = reasons.length > 0 ? `\n${reasons.join(' | ')}` : '';
+
   return {
     id: String(transaction._id),
     _id: String(transaction._id),
@@ -89,7 +94,7 @@ const transactionToDto = (transaction) => {
     recipient: transaction.recipient || '',
     description: transaction.description || '',
     location: transaction.location || '',
-    status: transaction.status || 'pending',
+    status: status,
     disputeStatus: transaction.disputeStatus || 'none',
     disputeReason: transaction.disputeReason || '',
     riskScore,
@@ -98,8 +103,7 @@ const transactionToDto = (transaction) => {
         ? Number(transaction.riskScorePercent || 0)
         : Math.round(riskScore * 100),
     riskLevel: transaction.riskLevel || deriveRiskLevel(riskScore),
-    aiRecommendation:
-      transaction.aiRecommendation || getDecisionRecommendation(transaction.status || 'pending'),
+    aiRecommendation: `${baseRecommendation}${reasonString}`,
     reasonCodes: Array.isArray(transaction.reasonCodes) ? transaction.reasonCodes : [],
     triggeredRules: Array.isArray(transaction.triggeredRules) ? transaction.triggeredRules : [],
     createdAt: transaction.createdAt ? new Date(transaction.createdAt).toISOString() : new Date().toISOString(),
@@ -404,7 +408,7 @@ exports.createTransaction = async (req, res) => {
       isOffline,
     });
 
-    if (availableBalance < amountNumber) {
+    if (amountNumber > 500000 && availableBalance < amountNumber) {
       return res.status(400).json({ success: false, message: 'Insufficient balance' });
     }
 
@@ -439,6 +443,7 @@ exports.createTransaction = async (req, res) => {
           riskScorePercent: fraudDecision.riskScorePercent,
           riskLevel: fraudDecision.riskLevel,
           reasonCodes: fraudDecision.reasonCodes,
+          reasons: fraudDecision.reasons,
           triggeredRules: fraudDecision.triggeredRules.map((rule) => rule.name),
         })
       : await Transaction.create({
@@ -454,6 +459,7 @@ exports.createTransaction = async (req, res) => {
           riskScorePercent: fraudDecision.riskScorePercent,
           riskLevel: fraudDecision.riskLevel,
           reasonCodes: fraudDecision.reasonCodes,
+          reasons: fraudDecision.reasons,
           triggeredRules: fraudDecision.triggeredRules.map((rule) => rule.name),
         });
 

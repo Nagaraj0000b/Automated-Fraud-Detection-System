@@ -42,6 +42,10 @@ const transactionSchema = new mongoose.Schema({
   location: {
     type: String, // e.g., "Mumbai, IN" or lat/long string
   },
+  ipAddress: {
+    type: String,
+    required: false,
+  },
   riskScore: {
     type: Number, // 0 to 1 (Fraud Likelihood)
     default: 0
@@ -62,6 +66,10 @@ const transactionSchema = new mongoose.Schema({
     default: [],
   },
   triggeredRules: {
+    type: [String],
+    default: [],
+  },
+  reasons: {
     type: [String],
     default: [],
   },

@@ -11,9 +11,6 @@ import {
   Search,
   ShieldAlert,
   Play,
-  CheckCircle,
-  XCircle,
-  AlertTriangle,
   RotateCcw,
   Trash2,
 } from 'lucide-react';
@@ -660,101 +657,95 @@ export default function AnalystDashboardRealV2() {
 
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[860px] text-left text-sm">
-                    <thead className="text-slate-400">
-                      <tr className="border-b border-slate-100">
-                        <th className="pb-3 font-medium">Txn ID</th>
-                        <th className="pb-3 font-medium">Date</th>
-                        <th className="pb-3 font-medium">User</th>
-                        <th className="pb-3 font-medium">Recipient</th>
-                        <th className="pb-3 font-medium">Amount</th>
-                         <th className="pb-3 font-medium">Risk</th>
-                        <th className="pb-3 font-medium">Status</th>
-                        <th className="pb-3 font-medium">AI Recommendation</th>
-                        {['admin', 'analyst'].includes(user.role) && <th className="pb-3 font-medium text-right">Actions</th>}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredTransactions.map((transaction) => {
-                        const riskScore = transaction.riskScorePercent ?? Math.round((transaction.riskScore || 0) * 100);
-                        const riskLevel = humanizeRiskLevel(transaction.riskLevel || getRiskLevelFromScore(riskScore));
+                                 <thead className="text-slate-400">
+                                   <tr className="border-b border-slate-100">
+                                     <th className="pb-3 font-medium">Txn ID</th>
+                                     <th className="pb-3 font-medium">Date</th>
+                                     <th className="pb-3 font-medium">User</th>
+                                     <th className="pb-3 font-medium">Recipient</th>
+                                     <th className="pb-3 font-medium">Amount</th>
+                                     <th className="pb-3 font-medium">Location</th>
+                                     <th className="pb-3 font-medium">Status</th>
+                                     <th className="pb-3 font-medium">AI Recommendation / Reason</th>
+                                     {['admin', 'analyst'].includes(user.role) && <th className="pb-3 font-medium text-right">Actions</th>}
+                                   </tr>
+                                 </thead>
+                                 <tbody>
+                                    {filteredTransactions.map((transaction) => (
+                                      <tr key={transaction._id} className="border-b border-slate-100 last:border-b-0">
+                                        <td className="py-4 font-mono font-semibold text-indigo-600">
+                                          {getDisplayTransactionId(transaction._id)}
+                                        </td>
+                                        <td className="py-4 text-slate-500">{formatDateTime(transaction.createdAt)}</td>
+                                        <td className="py-4">
+                                          <div className="font-medium text-slate-800">{transaction.user?.name || 'Unknown User'}</div>
+                                          <div className="text-slate-500">{transaction.user?.email || 'N/A'}</div>
+                                        </td>
+                                        <td className="py-4 text-slate-600">{transaction.recipient}</td>
+                                        <td className="py-4 font-semibold">{formatAmount(transaction.amount)}</td>
+                                        <td className="py-4 text-slate-600">{transaction.location || 'Unknown'}</td>
+                                        <td className="py-4">
+                                          <span className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${statusBadge[transaction.status] || 'bg-slate-100 text-slate-600'}`}>
+                                            {transaction.status}
+                                          </span>
+                                        </td>
+                                        <td className="py-4">
+                                          <div className="flex flex-col gap-1">
+                                            <span className={`inline-flex w-fit rounded-full px-2.5 py-1 text-xs font-semibold ${
+                                              transaction.status === 'blocked' ? 'bg-red-50 text-red-600' : 
+                                              transaction.status === 'flagged' ? 'bg-amber-50 text-amber-600' : 
+                                              'bg-emerald-50 text-emerald-600'
+                                            }`}>
+                                              {transaction.aiRecommendation || (transaction.status === 'blocked' ? 'Block Recommended' : transaction.status === 'flagged' ? 'Flag for Review' : 'Safe to Approve')}
+                                            </span>
+                                            <span className="text-[10px] text-slate-500 italic">
+                                              {transaction.triggeredRules?.length > 0 
+                                                ? transaction.triggeredRules.map(rule => {
+                                                    if(rule === 'SINGLE_TXN_LIMIT_EXCEEDED') return 'Single Txn Limit Exceeded';
+                                                    if(rule === 'DAILY_LIMIT_EXCEEDED') return 'Daily Limit Exceeded';
+                                                    if(rule === 'DIFFERENT_COUNTRY') return 'Different Country';
+                                                    if(rule === 'CITY_CHANGE') return 'City Change';
+                                                    if(rule === 'IP_CHANGE') return 'IP Address Change';
+                                                    if(rule === 'IP_AND_COUNTRY_CHANGE') return 'IP & Country Change';
+                                                    if(rule === 'CRITICAL_FREQUENCY') return 'Critical Frequency';
+                                                    if(rule === 'HIGH_FREQUENCY') return 'High Frequency';
+                                                    return rule;
+                                                }).join(' & ')
+                                                : transaction.status === 'blocked' ? 'Auto-blocked: Critical risk' : 
+                                                  transaction.status === 'flagged' ? 'Flagged: AI review required' : 
+                                                  'Approved: Within safe limits'}
+                                            </span>
+                                          </div>
+                                        </td>
+                                        {['admin', 'analyst'].includes(user.role) && (
+                                          <td className="py-4 text-right">
+                                            <div className="flex justify-end gap-2">
+                                              <div className="w-px h-4 bg-slate-200 mx-1" />
+                                              <button 
+                                                onClick={() => handleRecoverTransaction(transaction._id)}
+                                                className="p-1 text-indigo-600 hover:bg-indigo-50 rounded"
+                                                title="Recover / Approve"
+                                              >
+                                                <RotateCcw className="h-4 w-4" />
+                                              </button>
+                                              <button 
+                                                onClick={() => handleDeleteTransaction(transaction._id)}
+                                                className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded"
+                                                title="Delete"
+                                              >
+                                                <Trash2 className="h-4 w-4" />
+                                              </button>
+                                            </div>
+                                          </td>
+                                        )}
+                                      </tr>
+                                    ))
+                                  }
+                                </tbody>
 
-                        return (
-                          <tr key={transaction._id} className="border-b border-slate-100 last:border-b-0">
-                            <td className="py-4 font-mono font-semibold text-indigo-600">
-                              {getDisplayTransactionId(transaction._id)}
-                            </td>
-                            <td className="py-4 text-slate-500">{formatDateTime(transaction.createdAt)}</td>
-                            <td className="py-4">
-                              <div className="font-medium text-slate-800">{transaction.user?.name || 'Unknown User'}</div>
-                              <div className="text-slate-500">{transaction.user?.email || 'N/A'}</div>
-                            </td>
-                            <td className="py-4 text-slate-600">{transaction.recipient}</td>
-                            <td className="py-4 font-semibold">{formatAmount(transaction.amount)}</td>
-                            <td className="py-4">
-                              <span className={`rounded-full px-3 py-1 text-xs font-semibold ${riskBadge[riskLevel] || riskBadge.Low}`}>
-                                {riskScore}% {riskLevel}
-                              </span>
-                            </td>
-                            <td className="py-4">
-                              <span className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${statusBadge[transaction.status] || 'bg-slate-100 text-slate-600'}`}>
-                                {transaction.status}
-                              </span>
-                            </td>
-                            <td className="py-4">
-                              <span className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                                riskScore >= 80 ? 'bg-red-50 text-red-600' : 
-                                riskScore >= 50 ? 'bg-amber-50 text-amber-600' : 
-                                'bg-emerald-50 text-emerald-600'
-                              }`}>
-                                {riskScore >= 80 ? 'Block Recommended' : riskScore >= 50 ? 'Flag for Review' : 'Safe to Approve'}
-                              </span>
-                            </td>
-                            {['admin', 'analyst'].includes(user.role) && (
-                              <td className="py-4 text-right">
-                                <div className="flex justify-end gap-2">
-                                  <button 
-                                    onClick={() => handleUpdateTransactionStatus(transaction._id, 'approved')}
-                                    className="p-1 text-emerald-600 hover:bg-emerald-50 rounded"
-                                    title="Approve"
-                                  >
-                                    <CheckCircle className="h-4 w-4" />
-                                  </button>
-                                  <button 
-                                    onClick={() => handleUpdateTransactionStatus(transaction._id, 'flagged')}
-                                    className="p-1 text-amber-600 hover:bg-amber-50 rounded"
-                                    title="Flag for Review"
-                                  >
-                                    <AlertTriangle className="h-4 w-4" />
-                                  </button>
-                                  <button 
-                                    onClick={() => handleUpdateTransactionStatus(transaction._id, 'blocked')}
-                                    className="p-1 text-red-600 hover:bg-red-50 rounded"
-                                    title="Block"
-                                  >
-                                    <XCircle className="h-4 w-4" />
-                                  </button>
-                                  <div className="w-px h-4 bg-slate-200 mx-1" />
-                                  <button 
-                                    onClick={() => handleRecoverTransaction(transaction._id)}
-                                    className="p-1 text-indigo-600 hover:bg-indigo-50 rounded"
-                                    title="Recover / Approve"
-                                  >
-                                    <RotateCcw className="h-4 w-4" />
-                                  </button>
-                                  <button 
-                                    onClick={() => handleDeleteTransaction(transaction._id)}
-                                    className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded"
-                                    title="Delete"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </button>
-                                </div>
-                              </td>
-                            )}
-                          </tr>
-                        );
-                      })}
-                    </tbody>
+
+
+
                   </table>
                 </div>
               </section>

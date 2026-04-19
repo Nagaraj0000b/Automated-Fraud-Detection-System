@@ -127,7 +127,7 @@ exports.scoreTransaction = async ({
           RiskRule.find({ isActive: true }).lean(),
           Transaction.find({ user: userId })
             .sort({ createdAt: -1 })
-            .limit(20)
+            .limit(50) // Increased limit to better calculate daily total and frequency
             .select('amount createdAt location status transactionType recipient'),
         ])
       : [
@@ -135,10 +135,76 @@ exports.scoreTransaction = async ({
           getTransactions()
             .filter((txn) => txn.user === userId)
             .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-            .slice(0, 20),
+            .slice(0, 50),
         ];
 
   const now = nowOverride ? new Date(nowOverride) : new Date();
+  
+  // --- 🚨 MANDATORY HARD RULES START ---
+  let mandatoryStatus = 'approved';
+  const mandatoryReasons = [];
+  const mandatoryCodes = [];
+
+  // Rule 1: Single Transaction Limit (₹5,000)
+  if (normalizedAmount > 5000) {
+    mandatoryStatus = 'blocked';
+    mandatoryReasons.push('Transaction amount exceeds ₹5,000 limit');
+    mandatoryCodes.push('SINGLE_TXN_LIMIT_EXCEEDED');
+  }
+
+  // Rule 2: Daily Transaction Limit (₹2,50,000)
+  const startOfDay = new Date(now);
+  startOfDay.setHours(0, 0, 0, 0);
+  const dailyTotal = recentTransactions
+    .filter(txn => new Date(txn.createdAt) >= startOfDay)
+    .reduce((sum, txn) => sum + Number(txn.amount || 0), 0) + normalizedAmount;
+  
+  if (dailyTotal > 250000) {
+    mandatoryStatus = 'blocked';
+    mandatoryReasons.push('Daily transaction limit of ₹2,50,000 exceeded');
+    mandatoryCodes.push('DAILY_LIMIT_EXCEEDED');
+  }
+
+  // Rule 3: Location Rule
+  const parseLoc = (locStr) => {
+    if (!locStr) return { city: null, country: null };
+    const parts = locStr.split(',').map(s => s.trim().toLowerCase());
+    if (parts.length >= 2) return { city: parts[0], country: parts[1] };
+    // Fallback: try to detect if it's a country (simplified)
+    const commonCountries = ['us', 'usa', 'india', 'uk', 'canada', 'germany', 'france', 'china', 'japan'];
+    if (commonCountries.includes(parts[0])) return { city: null, country: parts[0] };
+    return { city: parts[0], country: 'unknown' };
+  };
+
+  const curr = parseLoc(normalizedLocation);
+  const lastTx = recentTransactions[0]; // most recent
+  if (lastTx) {
+    const last = parseLoc(lastTx.location);
+    if (curr.country && last.country && curr.country !== last.country) {
+      mandatoryStatus = 'blocked';
+      mandatoryReasons.push('Transaction from different country');
+      mandatoryCodes.push('DIFFERENT_COUNTRY');
+    } else if (curr.city && last.city && curr.city !== last.city) {
+      if (mandatoryStatus !== 'blocked') mandatoryStatus = 'flagged';
+      mandatoryReasons.push('Transaction from different city');
+      mandatoryCodes.push('CITY_CHANGE');
+    }
+  }
+
+  // Rule 4: Transaction Frequency (1 min)
+  const oneMinAgo = new Date(now.getTime() - 60000);
+  const freqCount = recentTransactions.filter(txn => new Date(txn.createdAt) >= oneMinAgo).length + 1;
+  if (freqCount >= 6) {
+    mandatoryStatus = 'blocked';
+    mandatoryReasons.push('Critical transaction frequency (6+ in 1 min)');
+    mandatoryCodes.push('CRITICAL_FREQUENCY');
+  } else if (freqCount >= 4) {
+    if (mandatoryStatus !== 'blocked') mandatoryStatus = 'flagged';
+    mandatoryReasons.push('High transaction frequency (4-5 in 1 min)');
+    mandatoryCodes.push('HIGH_FREQUENCY');
+  }
+  // --- 🚨 MANDATORY HARD RULES END ---
+
   const recent30Min = recentTransactions.filter(
     (txn) => now - new Date(txn.createdAt) <= 30 * 60 * 1000
   );
@@ -175,8 +241,8 @@ exports.scoreTransaction = async ({
   };
 
   let heuristicScore = 0.02;
-  const reasons = [];
-  const reasonCodes = [];
+  const reasons = [...mandatoryReasons];
+  const reasonCodes = [...mandatoryCodes];
   const actionQueue = [];
 
   if (veryHighAmount) {
@@ -221,13 +287,15 @@ exports.scoreTransaction = async ({
   const riskScorePercent = Math.round(riskScore * 100);
   const riskLevel = toRiskLevel(riskScorePercent);
 
-  let recommendedStatus = 'approved';
+  let recommendedStatus = mandatoryStatus;
   const shouldBlock =
+    recommendedStatus === 'blocked' ||
     strongestAction === 'block' ||
     actionQueue.includes('block') ||
     (riskScorePercent >= 80 &&
       (highAmount || foreignLocation || impossibleTravel));
   const shouldNotify =
+    recommendedStatus === 'flagged' ||
     strongestAction === 'flag' ||
     strongestAction === 'review' ||
     actionQueue.includes('notify') ||

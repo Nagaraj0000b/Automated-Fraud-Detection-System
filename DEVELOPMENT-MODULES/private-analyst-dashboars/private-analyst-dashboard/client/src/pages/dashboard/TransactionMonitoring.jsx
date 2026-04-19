@@ -144,109 +144,86 @@ export default function TransactionMonitoring() {
                 <CardContent className="p-0">
                     <div className="overflow-x-auto min-h-[400px]">
                         <table className="w-full text-sm text-left">
-                            <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-100">
-                                <tr>
-                                    <th className="px-6 py-3 font-medium">Txn ID / Date</th>
-                                    <th className="px-6 py-3 font-medium">User</th>
-                                    <th className="px-6 py-3 font-medium">Recipient</th>
-                                    <th className="px-6 py-3 font-medium">Amount</th>
-                                    <th className="px-6 py-3 font-medium">Status</th>
-                                    <th className="px-6 py-3 font-medium">Risk Score</th>
-                                    <th className="px-6 py-3 font-medium">AI Recommendation</th>
-                                    <th className="px-6 py-3 font-medium">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-50">
-                                {loading && transactions.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="8" className="px-6 py-12 text-center">
-                                            <Loader2 className="w-8 h-8 animate-spin text-blue-500 mx-auto" />
-                                            <p className="mt-2 text-slate-500">Loading transactions...</p>
-                                        </td>
-                                    </tr>
-                                ) : transactions.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="8" className="px-6 py-12 text-center text-slate-500">
-                                            No transactions found matching your criteria.
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    transactions.map((txn) => (
-                                        <tr key={txn._id} className="hover:bg-slate-50/50 transition-colors">
-                                            <td className="px-6 py-4">
-                                                <div className="font-mono text-xs text-slate-500">{txn._id.slice(-8)}</div>
-                                                <div className="text-xs text-slate-400 mt-0.5">{new Date(txn.createdAt).toLocaleString()}</div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="font-medium text-slate-900">{txn.user?.name || 'Unknown User'}</div>
-                                                <div className="text-xs text-slate-500">{txn.user?.email || 'N/A'}</div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="text-slate-700">{txn.recipient}</div>
-                                                {txn.description && <div className="text-xs text-slate-500 truncate max-w-[150px]">{txn.description}</div>}
-                                            </td>
-                                            <td className="px-6 py-4 font-medium text-slate-900">
-                                                ${txn.amount?.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <span className={`px-2.5 py-1 rounded-full text-xs font-medium capitalize ${getStatusStyle(txn.status)}`}>
-                                                    {txn.status}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getRiskStyle(txn.riskScore)}`}>
-                                                    {(txn.riskScore * 100).toFixed(1)}%
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${getDecisionTone(txn.status)}`}>
-                                                    {txn.aiRecommendation || getDecisionRecommendation(txn.status)}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 relative">
-                                                <button 
-                                                    onClick={() => setOpenDropdown(openDropdown === txn._id ? null : txn._id)}
-                                                    disabled={updatingTxnId === txn._id}
-                                                    className="p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 rounded-md"
-                                                >
-                                                    {updatingTxnId === txn._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <MoreVertical className="w-4 h-4" />}
-                                                </button>
+                                 <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-100">
+                                     <tr>
+                                         <th className="px-6 py-3 font-medium">Txn ID / Date</th>
+                                         <th className="px-6 py-3 font-medium">User</th>
+                                         <th className="px-6 py-3 font-medium">Recipient</th>
+                                         <th className="px-6 py-3 font-medium">Location</th>
+                                         <th className="px-6 py-3 font-medium">Amount</th>
+                                         <th className="px-6 py-3 font-medium">Status</th>
+                                         <th className="px-6 py-3 font-medium">AI Recommendation / Reason</th>
+                                     </tr>
+                                 </thead>
+                                 <tbody className="divide-y divide-slate-50">
+                                     {loading && transactions.length === 0 ? (
+                                         <tr>
+                                             <td colSpan="7" className="px-6 py-12 text-center">
+                                                 <Loader2 className="w-8 h-8 animate-spin text-blue-500 mx-auto" />
+                                                 <p className="mt-2 text-slate-500">Loading transactions...</p>
+                                             </td>
+                                         </tr>
+                                     ) : transactions.length === 0 ? (
+                                         <tr>
+                                             <td colSpan="7" className="px-6 py-12 text-center text-slate-500">
+                                                 No transactions found matching your criteria.
+                                             </td>
+                                         </tr>
+                                     ) : (
+                                         transactions.map((txn) => (
+                                             <tr key={txn._id} className="hover:bg-slate-50/50 transition-colors">
+                                                 <td className="px-6 py-4">
+                                                     <div className="font-mono text-xs text-slate-500">{txn._id.slice(-8)}</div>
+                                                     <div className="text-xs text-slate-400 mt-0.5">{new Date(txn.createdAt).toLocaleString()}</div>
+                                                 </td>
+                                                 <td className="px-6 py-4">
+                                                     <div className="font-medium text-slate-900">{txn.user?.name || 'Unknown User'}</div>
+                                                     <div className="text-xs text-slate-500">{txn.user?.email || 'N/A'}</div>
+                                                 </td>
+                                                 <td className="px-6 py-4">
+                                                     <div className="text-slate-700">{txn.recipient}</div>
+                                                     {txn.description && <div className="text-xs text-slate-500 truncate max-w-[150px]">{txn.description}</div>}
+                                                 </td>
+                                                 <td className="px-6 py-4 text-xs text-slate-500">
+                                                     {txn.location || 'Unknown'}
+                                                 </td>
+                                                 <td className="px-6 py-4 font-medium text-slate-900">
+                                                     ${txn.amount?.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                                 </td>
+                                                 <td className="px-6 py-4">
+                                                     <span className={`px-2.5 py-1 rounded-full text-xs font-medium capitalize ${getStatusStyle(txn.status)}`}>
+                                                         {txn.status}
+                                                     </span>
+                                                 </td>
+                                                 <td className="px-6 py-4">
+                                                     <div className="flex flex-col gap-1">
+                                                        <span className={`inline-flex w-fit rounded-full px-2.5 py-1 text-xs font-semibold ${getDecisionTone(txn.status)}`}>
+                                                            {txn.aiRecommendation || getDecisionRecommendation(txn.status)}
+                                                        </span>
+                                                        <span className="text-[10px] text-slate-500 italic">
+                                                          {txn.triggeredRules?.length > 0 
+                                                            ? txn.triggeredRules.map(rule => {
+                                                                if(rule === 'SINGLE_TXN_LIMIT_EXCEEDED') return 'Single Txn Limit Exceeded';
+                                                                if(rule === 'DAILY_LIMIT_EXCEEDED') return 'Daily Limit Exceeded';
+                                                                if(rule === 'DIFFERENT_COUNTRY') return 'Different Country';
+                                                                if(rule === 'CITY_CHANGE') return 'City Change';
+                                                                if(rule === 'IP_CHANGE') return 'IP Address Change';
+                                                                if(rule === 'IP_AND_COUNTRY_CHANGE') return 'IP & Country Change';
+                                                                if(rule === 'CRITICAL_FREQUENCY') return 'Critical Frequency';
+                                                                if(rule === 'HIGH_FREQUENCY') return 'High Frequency';
+                                                                return rule;
+                                                              }).join(' & ')
+                                                            : txn.status === 'blocked' ? 'Auto-blocked: Critical risk' : 
+                                                              txn.status === 'flagged' ? 'Flagged: AI review required' : 
+                                                              'Approved: Within safe limits'}
+                                                        </span>
+                                                     </div>
+                                                 </td>
+                                             </tr>
+                                         ))
+                                     )}
+                                 </tbody>
 
-                                                {/* Simple Action Dropdown */}
-                                                {openDropdown === txn._id && (
-                                                    <div className="absolute right-8 top-10 w-48 bg-white border border-slate-200 rounded-md shadow-lg z-10 py-1">
-                                                        <button 
-                                                            onClick={() => handleUpdateStatus(txn._id, 'approved')}
-                                                            className="w-full text-left px-4 py-2 text-sm text-emerald-600 hover:bg-slate-50 flex items-center"
-                                                        >
-                                                            <CheckCircle className="w-4 h-4 mr-2" /> Approve Txn
-                                                        </button>
-                                                        <button 
-                                                            onClick={() => handleUpdateStatus(txn._id, 'flagged')}
-                                                            className="w-full text-left px-4 py-2 text-sm text-amber-600 hover:bg-slate-50 flex items-center"
-                                                        >
-                                                            <AlertTriangle className="w-4 h-4 mr-2" /> Flag Txn
-                                                        </button>
-                                                        <button 
-                                                            onClick={() => handleUpdateStatus(txn._id, 'blocked')}
-                                                            className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-slate-50 flex items-center"
-                                                        >
-                                                            <XCircle className="w-4 h-4 mr-2" /> Block Txn
-                                                        </button>
-                                                        <div className="h-px bg-slate-100 my-1 mx-2"></div>
-                                                        <button 
-                                                            onClick={() => handleSuspendAccount(txn.user?._id, txn._id)}
-                                                            className="w-full text-left px-4 py-2 text-sm text-red-700 font-medium hover:bg-red-50 flex items-center"
-                                                        >
-                                                            <UserX className="w-4 h-4 mr-2" /> Suspend Account
-                                                        </button>
-                                                    </div>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
                         </table>
                     </div>
                 </CardContent>

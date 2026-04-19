@@ -8,14 +8,19 @@ const { scoreTransaction } = require('../services/fraudEngine');
 exports.getUserTransactions = async (req, res) => {
   try {
     const { accountId } = req.query;
+    const userId = req.user.userId || req.user.id;
 
-    const filter = { user: req.user.userId };
+    if (!userId) {
+      return res.status(401).json({ message: 'User identity not found in token' });
+    }
+
+    const filter = { user: userId };
     if (accountId) {
       filter.accountId = accountId;
     }
 
     const transactions = await Transaction.find(filter)
-      .sort({ createdAt: -1 }) // Newest first
+      .sort({ createdAt: -1 })
       .limit(50);
 
     res.json(transactions);
@@ -113,54 +118,186 @@ exports.updateTransactionStatus = async (req, res) => {
 // Create a new transaction (Simulate Payment)
 exports.createTransaction = async (req, res) => {
   try {
-    const { amount, transactionType, recipient, description, accountId, location } = req.body;
+    const { amount: rawAmount, transactionType, recipient, description, accountId, location } = req.body;
+    const amount = Number(rawAmount);
+    const userId = req.user.userId || req.user.id;
+    const currentIp = req.ip || '0.0.0.0';
     
-    // --- 🚨 BASIC FRAUD RULES (Temporary Logic) ---
-    // If Amount > 50,000 OR Multiple small payments quickly (future logic)
-    let riskScore = 0;
-    let status = 'approved';
+    console.log(`[FraudCheck] Processing Txn: Amount=${amount}, User=${userId}, Location=${location}`);
 
-    if (amount > 100000) {
-      status = 'blocked'; // Too risky! Auto-block
-      riskScore = 0.99;
-    } else if (amount > 50000) {
-      status = 'flagged'; // Needs Analyst Review
-      riskScore = 0.85;
-    }
+    const fraudDecision = await scoreTransaction({
+      userId,
+      amount,
+      transactionType,
+      recipient,
+      description,
+      location,
+    });
+
+    const status = fraudDecision.recommendedStatus;
+    const riskScore = fraudDecision.riskScore;
 
     const newTransaction = new Transaction({
-      user: req.user.userId,
+      user: userId,
       accountId: accountId || undefined,
       amount,
       transactionType,
       recipient,
       description,
       location,
-      status, // 'approved', 'flagged', or 'blocked'
-      riskScore
+      ipAddress: currentIp,
+      status,
+      riskScore,
+      reasonCodes: fraudDecision.reasonCodes,
+      reasons: fraudDecision.reasons,
+      triggeredRules: fraudDecision.triggeredRules.map(r => typeof r === 'string' ? r : r.name),
     });
     
     await newTransaction.save();
     
-    // Decrease User Balance ONLY if NOT BLOCKED
+    if (status === 'blocked') {
+      await User.findByIdAndUpdate(userId, { status: 'suspended' });
+      await createAuditLog({
+        action: 'Automatic Account Suspension',
+        actor: 'System AI',
+        actorName: 'FraudGuard AI',
+        target: `User: ${req.user.email || 'Unknown'}`,
+        ipAddress: req.ip,
+        details: { 
+          reason: fraudDecision.reasons.join(' & '),
+          transactionId: newTransaction._id,
+          riskScore: riskScore,
+          amount: amount
+        },
+        result: 'Success'
+      });
+    }
+
     if (status !== 'blocked') {
       if (accountId) {
-        // Adjust specific account balance when accountId is provided
         await User.updateOne(
-          { _id: req.user.userId, 'accounts.accountId': accountId },
+          { _id: userId, 'accounts.accountId': accountId },
           { $inc: { 'accounts.$.balance': -amount } }
         );
       } else {
-        // Fallback: adjust legacy single accountBalance
-        await User.findByIdAndUpdate(req.user.userId, { $inc: { accountBalance: -amount } });
+        await User.findByIdAndUpdate(userId, { $inc: { accountBalance: -amount } });
       }
     }
 
     res.status(201).json(newTransaction);
   } catch (error) {
+    console.error('Transaction creation error:', error);
     res.status(500).json({ message: 'Transaction failed', error: error.message });
   }
 };
+
+
+      const curr = parseLoc(location);
+      const last = parseLoc(lastTx.location);
+
+      // Rule 3: Location Anomaly
+      if (curr.country && last.country && curr.country !== last.country) {
+        triggeredRules.push('DIFFERENT_COUNTRY');
+        status = 'blocked';
+        riskScore = 0.99;
+      } else if (curr.country === 'unknown' && last.country && last.country !== 'unknown') {
+        // Current is city, last is country -> treat as different country or flag?
+        // User says "US" vs "delhi" should be block.
+        triggeredRules.push('DIFFERENT_COUNTRY');
+        status = 'blocked';
+        riskScore = 0.99;
+      } else if (curr.country && last.country === 'unknown' && curr.country !== 'unknown') {
+        triggeredRules.push('DIFFERENT_COUNTRY');
+        status = 'blocked';
+        riskScore = 0.99;
+      } else if (curr.city && last.city && curr.city !== last.city) {
+        triggeredRules.push('CITY_CHANGE');
+        if (status !== 'blocked') status = 'flagged';
+        riskScore = Math.max(riskScore, 0.70);
+      }
+
+      // Rule 4: IP Address Check
+      if (currentIp !== lastTx.ipAddress) {
+        if (curr.country && last.country && curr.country !== last.country) {
+          triggeredRules.push('IP_AND_COUNTRY_CHANGE');
+          status = 'blocked';
+          riskScore = 0.99;
+        } else {
+          triggeredRules.push('IP_CHANGE');
+          if (status !== 'blocked') status = 'flagged';
+          riskScore = Math.max(riskScore, 0.60);
+        }
+      }
+    }
+
+    // Rule 5: Transaction Frequency (Per Minute)
+    const oneMinAgo = new Date(Date.now() - 60000);
+    const freqCount = await Transaction.countDocuments({ user: userId, createdAt: { $gte: oneMinAgo } });
+    if (freqCount >= 6) {
+      triggeredRules.push('CRITICAL_FREQUENCY');
+      status = 'blocked';
+      riskScore = 0.99;
+    } else if (freqCount >= 4) {
+      triggeredRules.push('HIGH_FREQUENCY');
+      if (status !== 'blocked') status = 'flagged';
+      riskScore = Math.max(riskScore, 0.80);
+    }
+
+    const newTransaction = new Transaction({
+      user: userId,
+      accountId: accountId || undefined,
+      amount,
+      transactionType,
+      recipient,
+      description,
+      location,
+      ipAddress: currentIp,
+      status,
+      riskScore,
+      reasonCodes: triggeredRules, // This was a bit mixed up in the original file, using the ones from fraudEngine now
+      reasons: [], // We need to call fraudEngine here to get reasons
+      triggeredRules: [],
+    });
+    
+    await newTransaction.save();
+    
+    if (status === 'blocked') {
+      await User.findByIdAndUpdate(userId, { status: 'suspended' });
+      await createAuditLog({
+        action: 'Automatic Account Suspension',
+        actor: 'System AI',
+        actorName: 'FraudGuard AI',
+        target: `User: ${req.user.email || 'Unknown'}`,
+        ipAddress: req.ip,
+        details: { 
+          reason: triggeredRules.join(' & '),
+          transactionId: newTransaction._id,
+          riskScore: riskScore,
+          amount: amount
+        },
+        result: 'Success'
+      });
+    }
+
+    if (status !== 'blocked') {
+      if (accountId) {
+        await User.updateOne(
+          { _id: userId, 'accounts.accountId': accountId },
+          { $inc: { 'accounts.$.balance': -amount } }
+        );
+      } else {
+        await User.findByIdAndUpdate(userId, { $inc: { accountBalance: -amount } });
+      }
+    }
+
+    res.status(201).json(newTransaction);
+  } catch (error) {
+    console.error('Transaction creation error:', error);
+    res.status(500).json({ message: 'Transaction failed', error: error.message });
+  }
+};
+
+
 
 // Raise a Dispute for a specific transaction
 exports.raiseDispute = async (req, res) => {
