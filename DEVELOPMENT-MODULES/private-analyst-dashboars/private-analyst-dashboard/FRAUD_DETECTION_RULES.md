@@ -1,54 +1,63 @@
-# Fraud Detection Rules
+# Fraud Detection Rules & Testing
 
-This document outlines the automated logic used by the FraudGuard system to determine the status of transactions and user accounts.
+##  Fraud Detection Rules
 
-## 1. Transaction Status Rules
+🔹 **1. Single Transaction Limit**
+Max per transaction = ₹5,000
+amount > 5000 → BLOCK
+else → OK
 
-Transactions are evaluated automatically based on the following five rules. If any "Block" rule is triggered, the transaction is immediately blocked regardless of other checks.
+🔹 **2. Daily Transaction Limit**
+Max per day = ₹2,50,000
+todayTotal + amount > 2,50,000 → BLOCK
+else → OK
 
-| Rule | Condition | Status | Action |
-| :--- | :--- | :--- | :--- |
-| **Single Txn Limit** | Amount > ₹5,000 | `Blocked` | Transaction rejected & Account suspended. |
-| **Daily Limit** | Today's Total + Current Amount > ₹2,50,000 | `Blocked` | Transaction rejected & Account suspended. |
-| **Country Change** | Current Country $\neq$ Last Transaction Country | `Blocked` | Transaction rejected & Account suspended. |
-| **City/IP Anomaly** | Different City (Same Country) OR Different IP | `Flagged` | Held for manual Analyst review. |
-| **Frequency (High)** | > 6 transactions per minute | `Blocked` | Transaction rejected & Account suspended. |
-| **Frequency (Med)** | 4 to 6 transactions per minute | `Flagged` | Held for manual Analyst review. |
-| **Normal** | All rules passed | `Approved` | Transaction processed normally. |
+🔹 **3. Location Rule**
+Same city → APPROVE
+Same country, different city → FLAG
+Different country → BLOCK
 
-## 2. Automatic Account Suspension
-
-- **Trigger:** Any transaction that is automatically marked as `Blocked`.
-- **Action:** User account status is updated to `suspended`.
-- **Effect:** User is blocked from system access until an Administrator reactivates the account.
+🔹 **4. Transaction Frequency (1 min)**
+≤ 3 transactions → APPROVE
+4–6 transactions → FLAG
+≥ 6 transactions → BLOCK
 
 ---
 
-## 3. Black Box Testing Scenarios
+## ⬛ BLACK BOX TESTING (Input → Output)
+ 
 
-These cases are used to verify that the fraud engine is working correctly.
+** Test Cases**
+- **Normal Case**
+  `amount = 3000, todayTotal = 0, same city, tx/min = 2` $\rightarrow$ **APPROVE**
+- **Single Transaction Limit**
+  `amount = 6000` $\rightarrow$ **BLOCK**
+- **Daily Limit Case**
+  `todayTotal = 248000, amount = 5000` $\rightarrow$ **BLOCK**
+- **Location Change (same country)**
+  `amount = 3000, different city` $\rightarrow$ **FLAG**
+- **High Frequency**
+  `amount = 3000, tx/min = 7` $\rightarrow$ **BLOCK**
 
-### ✅ Case 1: Normal Case
-- **Input:** Amount = ₹3,000 | Today's Total = ₹0 | Same City | Tx/Min = 2
-- **Expected Output:** `APPROVE`
-- **Reason:** Normal user behavior; all limits within safe range.
+---
 
-### ❌ Case 2: Single Transaction Limit
-- **Input:** Amount = ₹6,000
-- **Expected Output:** `BLOCK`
-- **Reason:** Exceeds the ₹5,000 single transaction limit.
+##  WHITE BOX TESTING (Logic/Condition Coverage)
+ 
 
-### ❌ Case 3: Daily Limit Case
-- **Input:** Today's Total = ₹2,48,000 | Amount = ₹5,000
-- **Expected Output:** `BLOCK`
-- **Reason:** Total daily volume exceeds ₹2,50,000.
-
-### ⚠️ Case 4: Location Change (Same Country)
-- **Input:** Amount = ₹3,000 | Different City (Same Country)
-- **Expected Output:** `FLAG`
-- **Reason:** Geographical anomaly detected (City change), requires review.
-
-### ❌ Case 5: High Frequency
-- **Input:** Amount = ₹3,000 | Tx/Min = 7
-- **Expected Output:** `BLOCK`
-- **Reason:** Transaction frequency exceeds the critical limit of 6 per minute.
+** Test Cases**
+- **amount condition (true case)**
+  `amount = 7000` $\rightarrow$ **BLOCK**
+  *(covers: amount > 5000)*
+- **daily limit condition (true case)**
+  `todayTotal = 249000, amount = 4000` $\rightarrow$ **BLOCK**
+  *(covers: todayTotal + amount > 250000)*
+- **location branch (city change)**
+  `amount = 3000, different city` $\rightarrow$ **FLAG**
+  *(covers: location condition)*
+- **location branch (country change)**
+  `amount = 3000, different country` $\rightarrow$ **BLOCK**
+  *(covers: location condition)*
+- **frequency condition**
+  `tx/min = 5` $\rightarrow$ **FLAG**
+  `tx/min = 7` $\rightarrow$ **BLOCK**
+  *(covers: both branches)*

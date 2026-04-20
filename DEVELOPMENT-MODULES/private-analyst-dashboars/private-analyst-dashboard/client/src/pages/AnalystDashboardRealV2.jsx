@@ -309,6 +309,10 @@ export default function AnalystDashboardRealV2() {
       const riskLevel = humanizeRiskLevel(transaction.riskLevel || getRiskLevelFromScore(riskScore));
       const displayTransactionId = getDisplayTransactionId(transaction._id).toLowerCase();
 
+      // Force only flagged or blocked transactions for the Fraud Detection view
+      const isFraudCase = ['flagged', 'blocked'].includes(transaction.status);
+      if (!isFraudCase) return false;
+
       const matchesSearch =
         !q ||
         String(transaction._id).toLowerCase().includes(q) ||
@@ -657,19 +661,21 @@ export default function AnalystDashboardRealV2() {
 
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[860px] text-left text-sm">
-                                 <thead className="text-slate-400">
-                                   <tr className="border-b border-slate-100">
-                                     <th className="pb-3 font-medium">Txn ID</th>
-                                     <th className="pb-3 font-medium">Date</th>
-                                     <th className="pb-3 font-medium">User</th>
-                                     <th className="pb-3 font-medium">Recipient</th>
-                                     <th className="pb-3 font-medium">Amount</th>
-                                     <th className="pb-3 font-medium">Location</th>
-                                     <th className="pb-3 font-medium">Status</th>
-                                     <th className="pb-3 font-medium">AI Recommendation / Reason</th>
-                                     {['admin', 'analyst'].includes(user.role) && <th className="pb-3 font-medium text-right">Actions</th>}
-                                   </tr>
-                                 </thead>
+                                  <thead className="text-slate-400">
+                                    <tr className="border-b border-slate-100">
+                                      <th className="pb-3 font-medium">Txn ID</th>
+                                      <th className="pb-3 font-medium">Date</th>
+                                      <th className="pb-3 font-medium">User</th>
+                                      <th className="pb-3 font-medium">Recipient</th>
+                                      <th className="pb-3 font-medium">Description</th>
+                                      <th className="pb-3 font-medium">Amount</th>
+                                      <th className="pb-3 font-medium">Location</th>
+                                      <th className="pb-3 font-medium">Status</th>
+                                      <th className="pb-3 font-medium">AI Recommendation / Reason</th>
+                                      {['admin', 'analyst'].includes(user.role) && <th className="pb-3 font-medium text-right">Actions</th>}
+                                    </tr>
+                                  </thead>
+
                                  <tbody>
                                     {filteredTransactions.map((transaction) => (
                                       <tr key={transaction._id} className="border-b border-slate-100 last:border-b-0">
@@ -681,14 +687,16 @@ export default function AnalystDashboardRealV2() {
                                           <div className="font-medium text-slate-800">{transaction.user?.name || 'Unknown User'}</div>
                                           <div className="text-slate-500">{transaction.user?.email || 'N/A'}</div>
                                         </td>
-                                        <td className="py-4 text-slate-600">{transaction.recipient}</td>
-                                        <td className="py-4 font-semibold">{formatAmount(transaction.amount)}</td>
-                                        <td className="py-4 text-slate-600">{transaction.location || 'Unknown'}</td>
-                                        <td className="py-4">
-                                          <span className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${statusBadge[transaction.status] || 'bg-slate-100 text-slate-600'}`}>
-                                            {transaction.status}
-                                          </span>
-                                        </td>
+                                         <td className="py-4 text-slate-600">{transaction.recipient}</td>
+                                         <td className="py-4 text-slate-600">{transaction.description || 'N/A'}</td>
+                                         <td className="py-4 font-semibold">{formatAmount(transaction.amount)}</td>
+                                         <td className="py-4 text-slate-600">{transaction.location || 'Unknown'}</td>
+                                         <td className="py-4">
+                                           <span className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${statusBadge[transaction.status] || 'bg-slate-100 text-slate-600'}`}>
+                                             {transaction.status}
+                                           </span>
+                                         </td>
+
                                         <td className="py-4">
                                           <div className="flex flex-col gap-1">
                                             <span className={`inline-flex w-fit rounded-full px-2.5 py-1 text-xs font-semibold ${

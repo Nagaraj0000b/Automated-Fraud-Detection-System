@@ -144,17 +144,19 @@ export default function TransactionMonitoring() {
                 <CardContent className="p-0">
                     <div className="overflow-x-auto min-h-[400px]">
                         <table className="w-full text-sm text-left">
-                                 <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-100">
-                                     <tr>
-                                         <th className="px-6 py-3 font-medium">Txn ID / Date</th>
-                                         <th className="px-6 py-3 font-medium">User</th>
-                                         <th className="px-6 py-3 font-medium">Recipient</th>
-                                         <th className="px-6 py-3 font-medium">Location</th>
-                                         <th className="px-6 py-3 font-medium">Amount</th>
-                                         <th className="px-6 py-3 font-medium">Status</th>
-                                         <th className="px-6 py-3 font-medium">AI Recommendation / Reason</th>
-                                     </tr>
-                                 </thead>
+                                  <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-100">
+                                      <tr>
+                                          <th className="px-6 py-3 font-medium">Txn ID / Date</th>
+                                          <th className="px-6 py-3 font-medium">User</th>
+                                          <th className="px-6 py-3 font-medium">Recipient</th>
+                                          <th className="px-6 py-3 font-medium">Description</th>
+                                          <th className="px-6 py-3 font-medium">Location</th>
+                                          <th className="px-6 py-3 font-medium">Amount</th>
+                                          <th className="px-6 py-3 font-medium">Status</th>
+                                          <th className="px-6 py-3 font-medium">AI Recommendation / Reason</th>
+                                      </tr>
+                                  </thead>
+
                                  <tbody className="divide-y divide-slate-50">
                                      {loading && transactions.length === 0 ? (
                                          <tr>
@@ -180,13 +182,16 @@ export default function TransactionMonitoring() {
                                                      <div className="font-medium text-slate-900">{txn.user?.name || 'Unknown User'}</div>
                                                      <div className="text-xs text-slate-500">{txn.user?.email || 'N/A'}</div>
                                                  </td>
-                                                 <td className="px-6 py-4">
-                                                     <div className="text-slate-700">{txn.recipient}</div>
-                                                     {txn.description && <div className="text-xs text-slate-500 truncate max-w-[150px]">{txn.description}</div>}
-                                                 </td>
-                                                 <td className="px-6 py-4 text-xs text-slate-500">
-                                                     {txn.location || 'Unknown'}
-                                                 </td>
+                                                  <td className="px-6 py-4">
+                                                      <div className="text-slate-700">{txn.recipient}</div>
+                                                  </td>
+                                                  <td className="px-6 py-4 text-xs text-slate-500">
+                                                      {txn.description || 'N/A'}
+                                                  </td>
+                                                  <td className="px-6 py-4 text-xs text-slate-500">
+                                                      {txn.location || 'Unknown'}
+                                                  </td>
+
                                                  <td className="px-6 py-4 font-medium text-slate-900">
                                                      ${txn.amount?.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                                  </td>
