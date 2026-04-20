@@ -1,204 +1,220 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { transactionAPI, accountAPI } from '../services/api';
+import { ArrowLeft, Send, MapPin, Building2, CreditCard, AlertCircle } from 'lucide-react';
 
 const MakePayment = () => {
   const navigate = useNavigate();
   const [accounts, setAccounts] = useState([]);
   const [selectedAccountId, setSelectedAccountId] = useState('');
-  const [form, setForm] = useState({ amount: '', recipient: '', description: '', location: '' });
+  const [amount, setAmount] = useState('');
+  const [recipient, setRecipient] = useState('');
+  const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  
+  // Location state
+  const [location, setLocation] = useState(null);
   const [locationDetecting, setLocationDetecting] = useState(false);
 
-  // Load accounts on mount
   useEffect(() => {
-    (async () => {
+    const fetchAccounts = async () => {
       try {
-        const res = await accountAPI.getMyAccounts();
-        if (res.success && Array.isArray(res.accounts) && res.accounts.length > 0) {
-          setAccounts(res.accounts);
-          setSelectedAccountId(res.accounts[0].accountId);
+        const response = await accountAPI.getMyAccounts();
+        if (response.success && response.accounts && response.accounts.length > 0) {
+          setAccounts(response.accounts);
+          setSelectedAccountId(response.accounts[0].accountId);
         }
-      } catch (e) {
-        setError('Failed to load accounts.');
+      } catch (err) {
+        console.error('Failed to load accounts', err);
+        setError('Failed to load your accounts. Please try again.');
       }
-    })();
+    };
+    fetchAccounts();
   }, []);
 
-  // Auto-detect user location (browser will ask for permission)
-  useEffect(() => {
-    if (!navigator.geolocation) {
-      return;
-    }
+  const detectLocation = () => {
     setLocationDetecting(true);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        const loc = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
-        setForm((prev) => ({ ...prev, location: loc }));
-        setLocationDetecting(false);
-      },
-      () => {
-        // If user denies or it fails, they can type location manually
-        setLocationDetecting(false);
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
-  }, []);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-    setError('');
-    setSuccess('');
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setLocation({
+            lat: position.coords.latitude,
+            long: position.coords.longitude
+          });
+          setLocationDetecting(false);
+        },
+        (error) => {
+          console.error("Error getting location", error);
+          setLocationDetecting(false);
+        }
+      );
+    } else {
+      setLocationDetecting(false);
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-    setSuccess('');
-
-    const amountNumber = parseFloat(form.amount);
-    if (!selectedAccountId) {
-      setError('Please select a bank account.');
+    if (!selectedAccountId || !amount || !recipient) {
+      setError("Please fill in all required fields.");
       return;
     }
-    if (!amountNumber || amountNumber <= 0) {
-      setError('Please enter a valid amount.');
-      return;
-    }
-    if (!form.recipient.trim()) {
-      setError('Please enter a recipient or merchant.');
-      return;
-    }
-    if (!form.location.trim()) {
-      setError('Please enter a location.');
-      return;
-    }
-
+    
     setLoading(true);
+    setError('');
+
     try {
-      await transactionAPI.createTransaction({
-        amount: amountNumber,
-        recipient: form.recipient.trim(),
-        description: form.description.trim(),
-        location: form.location.trim(),
-        transactionType: 'transfer',
+      const payload = {
         accountId: selectedAccountId,
-      });
-      setSuccess('Payment created successfully and will appear in your dashboard.');
-      setForm({ amount: '', recipient: '', description: '', location: '' });
+        amount: Number(amount),
+        recipient,
+        description,
+        location: location || undefined
+      };
+      
+      await transactionAPI.createTransaction(payload);
+      navigate('/customer-dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || 'Payment failed.');
+      console.error(err);
+      setError(err.response?.data?.message || 'Transaction failed. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const goToDashboard = () => {
-    navigate('/customer-dashboard');
-  };
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-slate-900 to-zinc-900 p-4">
-      <div className="w-full max-w-md bg-black/40 border border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl backdrop-blur-xl">
-        <h1 className="text-2xl font-bold text-white mb-2">Make a Payment</h1>
-        <p className="text-xs text-white/50 mb-6">
-          Choose a bank account, enter payment details, and this transaction will be visible under your Customer Dashboard where you can also raise disputes.
-        </p>
+    <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-4">
+      <div className="w-full max-w-lg bg-white border border-slate-200 rounded-3xl p-8 sm:p-10 shadow-sm">
+        
+        <button 
+          onClick={() => navigate('/customer-dashboard')}
+          className="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-slate-900 mb-8 transition-colors group"
+        >
+          <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" /> Back to Dashboard
+        </button>
+        
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Transfer Funds</h1>
+          <p className="text-sm font-medium text-slate-500 mt-2">
+            Securely transfer money. This transaction will be monitored by FraudGuard AI.
+          </p>
+        </div>
 
-        {error && <div className="mb-3 text-xs text-rose-300">{error}</div>}
-        {success && <div className="mb-3 text-xs text-emerald-300">{success}</div>}
+        {error && (
+          <div className="mb-6 p-4 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-3 text-rose-700">
+            <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+            <p className="text-sm font-bold">{error}</p>
+          </div>
+        )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          
           <div>
-            <label className="block text-xs font-medium text-white/70 mb-1">From Bank Account</label>
-            <select
-              value={selectedAccountId}
-              onChange={(e) => setSelectedAccountId(e.target.value)}
-              className="w-full bg-white/5 border border-white/15 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/60"
-            >
-              {accounts.map((acc) => (
-                <option key={acc.accountId} value={acc.accountId} className="bg-slate-900">
-                  {acc.bankName} ({acc.accountNumber})
-                </option>
-              ))}
-            </select>
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">From Bank Account</label>
+            <div className="relative">
+              <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+              <select
+                value={selectedAccountId}
+                onChange={(e) => setSelectedAccountId(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl py-4 pl-12 pr-4 text-sm font-bold text-slate-900 appearance-none focus:outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all cursor-pointer"
+                required
+              >
+                <option value="" disabled>Select an account</option>
+                {accounts.map(acc => (
+                  <option key={acc.accountId} value={acc.accountId}>
+                    {acc.bankName} (****{acc.accountNumber?.slice(-4) || '0000'})
+                  </option>
+                ))}
+              </select>
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+              </div>
+            </div>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-white/70 mb-1">Amount (₹)</label>
-            <input
-              type="number"
-              name="amount"
-              min="0"
-              step="0.01"
-              value={form.amount}
-              onChange={handleChange}
-              className="w-full bg-white/5 border border-white/15 rounded-xl px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-cyan-500/60"
-              placeholder="Enter amount"
-            />
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Amount (₹)</label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl font-bold text-slate-400">₹</span>
+              <input
+                type="number"
+                min="1"
+                step="any"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl py-4 pl-10 pr-4 text-2xl font-bold text-slate-900 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all"
+                placeholder="0.00"
+                required
+              />
+            </div>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-white/70 mb-1">Recipient / Merchant</label>
-            <input
-              type="text"
-              name="recipient"
-              value={form.recipient}
-              onChange={handleChange}
-              className="w-full bg-white/5 border border-white/15 rounded-xl px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-cyan-500/60"
-              placeholder="e.g., Flipkart, Amazon, UPI ID"
-            />
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Recipient / Merchant</label>
+            <div className="relative">
+              <CreditCard className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+              <input
+                type="text"
+                value={recipient}
+                onChange={(e) => setRecipient(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl py-4 pl-12 pr-4 text-sm font-bold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all"
+                placeholder="e.g. Amazon, John Doe"
+                required
+              />
+            </div>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-white/70 mb-1 flex items-center justify-between">
-              <span>Location</span>
-              {locationDetecting && (
-                <span className="text-[10px] text-cyan-300">Detecting from device…</span>
-              )}
-            </label>
-            <input
-              type="text"
-              name="location"
-              value={form.location}
-              onChange={handleChange}
-              className="w-full bg-white/5 border border-white/15 rounded-xl px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-cyan-500/60"
-              placeholder="Auto-detected or enter manually (e.g., Mumbai, IN)"
-            />
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Location</label>
+              {locationDetecting && <span className="text-[10px] font-bold text-slate-400 uppercase animate-pulse">Detecting...</span>}
+            </div>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={detectLocation}
+                className="flex-shrink-0 flex items-center justify-center w-14 h-14 bg-slate-50 border border-slate-200 hover:border-slate-300 text-slate-600 hover:text-slate-900 rounded-xl transition-all"
+                title="Detect Location"
+              >
+                <MapPin className="w-5 h-5" />
+              </button>
+              <div className="flex-1 bg-slate-50 border border-slate-200 rounded-xl py-4 px-4 flex items-center text-sm font-medium text-slate-500">
+                {location ? (
+                  <span className="text-emerald-600 font-bold flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Verified ({location.lat.toFixed(2)}, {location.long.toFixed(2)})
+                  </span>
+                ) : (
+                  <span>No location attached</span>
+                )}
+              </div>
+            </div>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-white/70 mb-1">Description (optional)</label>
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Description (optional)</label>
             <textarea
-              name="description"
-              value={form.description}
-              onChange={handleChange}
-              rows={3}
-              className="w-full bg-white/5 border border-white/15 rounded-xl px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-cyan-500/60"
-              placeholder="Add a note for this payment"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm font-bold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all min-h-[100px] resize-none"
+              placeholder="What is this transfer for?"
             />
           </div>
 
-          <div className="flex items-center justify-between pt-2">
-            <button
-              type="button"
-              onClick={goToDashboard}
-              className="text-xs text-white/60 hover:text-white px-3 py-2 rounded-lg hover:bg-white/5"
-            >
-              ← Back to Dashboard
-            </button>
+          <div className="pt-4">
             <button
               type="submit"
               disabled={loading}
-              className="text-xs font-semibold text-white bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 rounded-lg px-4 py-2 shadow-lg shadow-cyan-900/40 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 text-white py-4 rounded-xl font-bold transition-all shadow-sm disabled:opacity-50"
             >
-              {loading ? 'Processing...' : 'Send Payment'}
+              {loading ? 'Processing...' : (
+                <>
+                  <Send className="w-5 h-5" /> Confirm Transfer
+                </>
+              )}
             </button>
           </div>
+          
         </form>
       </div>
     </div>
