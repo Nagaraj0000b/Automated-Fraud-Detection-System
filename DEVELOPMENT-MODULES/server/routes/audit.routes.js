@@ -7,10 +7,10 @@ const { verifyToken } = require('../middleware/auth.middleware');
 router.use(verifyToken);
 
 /**
- * Role-based access control: Only 'admin' or 'auditor' can view audit logs
+ * Role-based access control: Only 'admin' can view audit logs
  */
 const authorizeAuditAccess = (req, res, next) => {
-  if (['admin', 'auditor'].includes(req.user.role)) {
+  if (['admin'].includes(req.user.role)) {
     next();
   } else {
     res.status(403).json({ success: false, message: 'Not authorized for audit logs' });

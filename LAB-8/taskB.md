@@ -32,7 +32,7 @@ I tested the User Authentication API Endpoints (`POST /api/auth/signin` and `POS
 
 **Implementation 2: Transaction API**
 I tested the Transaction API Endpoints (`POST /api/transactions/create`) focusing on endpoint security and input processing.
--   **Test Paths:** Unauthenticated access rejection (401), successful low-value creation (201), and auto-flagging high-value creation (201).
+-   **Test Paths:** Unauthenticated access rejection (401), successful low-value creation (201), auto-flagging high-value creation (201), and securely handling missing required data (500).
 
 **Implementation 3: Dashboard API**
 I tested the Dashboard API Endpoints (`GET /api/dashboard/stats` and `GET /api/dashboard/recent-users`).
@@ -40,7 +40,7 @@ I tested the Dashboard API Endpoints (`GET /api/dashboard/stats` and `GET /api/d
 
 **Implementation 4: User API (Role-Based Access Control)**
 I tested the User Management API (`GET /api/users` and `POST /api/users/reactivation-request`).
--   **Test Paths:** Ensuring a public user can hit the reactivation endpoint, verifying standard logged-in users are blocked from fetching the user list (403), and verifying admins successfully receive the user list (200).
+-   **Test Paths:** Ensuring a public user can hit the reactivation endpoint, blocking completely unauthenticated access (401), verifying standard logged-in users are blocked from fetching the user list (403), and verifying admins successfully receive the user list (200).
 
 ## Test Execution Results
 All test cases were executed using the command `npm test`.
@@ -50,11 +50,11 @@ All test cases were executed using the command `npm test`.
 > jest
 
 Test Suites: 8 passed, 8 total
-Tests:       24 passed, 24 total
+Tests:       34 passed, 34 total
 Snapshots:   0 total
-Time:        2.678 s, estimated 3 s
+Time:        3.120 s, estimated 4 s
 Ran all test suites.
 ```
 
 **Conclusion:** 
-Both White Box and Black Box testing methodologies have been successfully implemented and performed across all major system components (Authentication, Transactions, User Management, and Dashboard Analytics). The code functions precisely as expected across 24 test paths and inputs.
+Both White Box and Black Box testing methodologies have been successfully implemented and performed across all major system components (Authentication, Transactions, User Management, and Dashboard Analytics). The code functions precisely as expected across 34 test paths and inputs.

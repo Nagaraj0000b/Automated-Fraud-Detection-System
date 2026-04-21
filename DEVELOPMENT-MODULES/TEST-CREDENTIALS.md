@@ -22,14 +22,6 @@
 
 ---
 
-## 📋 Auditor Accounts
-
-| Name | Email | Password | Department |
-|------|-------|----------|------------|
-| Rachel Green | `auditor@fraudshield.com` | `Auditor@123` | Compliance |
-
----
-
 ## 👤 User Accounts
 
 | Name | Email | Password | Department |

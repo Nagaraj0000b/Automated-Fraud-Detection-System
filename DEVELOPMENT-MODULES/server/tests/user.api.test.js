@@ -55,6 +55,13 @@ describe('User API (Black Box Testing)', () => {
     expect(res.statusCode).toBe(404);
   });
 
+  it('should deny entirely unauthenticated requests from getting the user list (401 Unauthorized)', async () => {
+    const res = await request(app)
+      .get('/api/users');
+
+    expect(res.statusCode).toBe(401);
+  });
+
   it('should deny non-admins from getting the user list (403 Forbidden)', async () => {
     const res = await request(app)
       .get('/api/users')

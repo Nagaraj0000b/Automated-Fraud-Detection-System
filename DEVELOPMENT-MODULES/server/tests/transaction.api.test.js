@@ -71,4 +71,15 @@ describe('Transaction API (Black Box Testing)', () => {
     expect(res.body.amount).toBe(80000);
     expect(res.body.status).toBe('flagged');
   });
+
+  it('should fallback securely when missing required transaction data (500/400)', async () => {
+    const res = await request(app)
+      .post('/api/transactions/create')
+      .set('Authorization', `Bearer ${authToken}`)
+      .send({ amount: 5000 }); // Missing recipient, transactionType, etc.
+
+    // Mongoose validation catches it; controller handles error
+    expect(res.statusCode).toBe(500);
+    expect(res.body.message).toBe('Transaction failed');
+  });
 });

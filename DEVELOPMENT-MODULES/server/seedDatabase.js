@@ -46,16 +46,6 @@ const demoUsers = [
     status: 'active'
   },
 
-  // Auditor accounts
-  {
-    email: 'auditor@fraudshield.com',
-    password: 'Auditor@123',
-    name: 'Rachel Green',
-    role: 'auditor',
-    department: 'Compliance',
-    status: 'active'
-  },
-
   // Regular user accounts
   {
     email: 'user@fraudshield.com',
@@ -113,7 +103,7 @@ async function seedUsers() {
     console.log('\n🎉 Database seeded successfully!');
     console.log('\n--- Test Credentials ---\n');
 
-    const roles = ['admin', 'analyst', 'auditor', 'user'];
+    const roles = ['admin', 'analyst', 'user'];
     roles.forEach(role => {
       console.log(`\n🔹 ${role.toUpperCase()} accounts:`);
       demoUsers

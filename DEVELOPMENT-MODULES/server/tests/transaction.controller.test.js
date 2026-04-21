@@ -1,9 +1,13 @@
 const httpMocks = require('node-mocks-http');
-const { createTransaction } = require('../controllers/transaction.controller');
+const { createTransaction, updateTransactionStatus, raiseDispute } = require('../controllers/transaction.controller');
 const Transaction = require('../models/Transaction');
 const User = require('../models/User');
+const { createAuditLog } = require('../controllers/audit.controller');
 
 jest.mock('../models/User');
+jest.mock('../controllers/audit.controller', () => ({
+  createAuditLog: jest.fn().mockResolvedValue(true)
+}));
 
 describe('Transaction Controller (White Box Testing)', () => {
   let req, res;
@@ -73,5 +77,62 @@ describe('Transaction Controller (White Box Testing)', () => {
     expect(User.findByIdAndUpdate).not.toHaveBeenCalled();
     
     Transaction.prototype.save.mockRestore();
+  });
+
+  describe('updateTransactionStatus logic', () => {
+    beforeEach(() => {
+      req = httpMocks.createRequest({
+        params: { transactionId: 'tx123' },
+        body: { status: 'approved' },
+        user: { userId: 'admin123', name: 'Admin' }
+      });
+    });
+
+    it('should return 400 for invalid status', async () => {
+      req.body.status = 'unknown';
+      await updateTransactionStatus(req, res);
+      expect(res.statusCode).toBe(400);
+      expect(res._getJSONData().message).toBe('Invalid status');
+    });
+
+    it('should update transaction status and log audit', async () => {
+      const mockTx = { _id: 'tx123', status: 'flagged', amount: 500, recipient: 'test', save: jest.fn() };
+      Transaction.findById = jest.fn().mockResolvedValue(mockTx);
+
+      await updateTransactionStatus(req, res);
+
+      expect(mockTx.status).toBe('approved');
+      expect(mockTx.save).toHaveBeenCalled();
+      expect(createAuditLog).toHaveBeenCalled();
+      expect(res.statusCode).toBe(200);
+    });
+  });
+
+  describe('raiseDispute logic', () => {
+    beforeEach(() => {
+      req = httpMocks.createRequest({
+        params: { transactionId: 'tx123' },
+        body: { reason: 'Unauthorized charge' },
+        user: { userId: 'user123' }
+      });
+    });
+
+    it('should return 404 if transaction is not found or unowned', async () => {
+      Transaction.findOne = jest.fn().mockResolvedValue(null);
+      await raiseDispute(req, res);
+      expect(res.statusCode).toBe(404);
+    });
+
+    it('should successfully raise dispute', async () => {
+      const mockTx = { _id: 'tx123', disputeStatus: 'none', save: jest.fn() };
+      Transaction.findOne = jest.fn().mockResolvedValue(mockTx);
+
+      await raiseDispute(req, res);
+
+      expect(mockTx.disputeStatus).toBe('open');
+      expect(mockTx.disputeReason).toBe('Unauthorized charge');
+      expect(mockTx.save).toHaveBeenCalled();
+      expect(res.statusCode).toBe(200);
+    });
   });
 });
