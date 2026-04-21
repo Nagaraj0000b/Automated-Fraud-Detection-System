@@ -1,0 +1,278 @@
+{
+  "createdAt": "2026-04-08T19:29:14.302Z",
+  "createdBy": "analyst@fraudshield.com",
+  "mode": "mongodb",
+  "users": [
+    {
+      "_id": "69d491fb35fc2327c24826ba",
+      "email": "admin@fraudshield.com",
+      "password": "$2a$10$5w.TfN/OOLKcxGTuy9c0zOzJ.MQnTGV5UjLGURs/0dO2TWIJ6Wmla",
+      "name": "Sarah Johnson",
+      "role": "admin",
+      "accountBalance": 250000,
+      "status": "active",
+      "department": "Security Operations",
+      "lastLogin": null,
+      "accounts": [],
+      "createdAt": "2026-04-07T05:11:23.518Z",
+      "updatedAt": "2026-04-08T19:07:51.004Z",
+      "__v": 0
+    },
+    {
+      "_id": "69d491fb35fc2327c24826bc",
+      "email": "admin2@fraudshield.com",
+      "password": "$2a$10$BZ2UEb/sSkDuZlf8X8B2OuLgds7.c.aWS88VAK7iYS.qAOHpslZk.",
+      "name": "Michael Chen",
+      "role": "admin",
+      "accountBalance": 250000,
+      "status": "active",
+      "department": "IT Management",
+      "lastLogin": null,
+      "accounts": [],
+      "createdAt": "2026-04-07T05:11:23.638Z",
+      "updatedAt": "2026-04-08T19:07:51.139Z",
+      "__v": 0
+    },
+    {
+      "_id": "69d491fb35fc2327c24826be",
+      "email": "analyst@fraudshield.com",
+      "password": "$2a$10$nJOsg78dxXpOBvEft69/r.7J/QMEz1O0Fi5xRsiGO4NnHdTAIBeNe",
+      "name": "Emily Davis",
+      "role": "analyst",
+      "accountBalance": 250000,
+      "status": "active",
+      "department": "Fraud Analysis",
+      "lastLogin": null,
+      "accounts": [
+        {
+          "accountId": "acc-69d491fb35fc2327c24826be",
+          "bankName": "SecureBank",
+          "accountNumber": "**** **** **** 26BE",
+          "balance": 250000,
+          "_id": "69d4ad54df8f1a051aea3f3e"
+        }
+      ],
+      "createdAt": "2026-04-07T05:11:23.753Z",
+      "updatedAt": "2026-04-08T19:07:51.263Z",
+      "__v": 2
+    },
+    {
+      "_id": "69d491fb35fc2327c24826c0",
+      "email": "analyst2@fraudshield.com",
+      "password": "$2a$10$DWmQhzULI/FzA6mnV0CULuINJ8qbZzqcvwvOPgKrSt3LzuDx1z4ee",
+      "name": "James Wilson",
+      "role": "analyst",
+      "accountBalance": 250000,
+      "status": "active",
+      "department": "Risk Assessment",
+      "lastLogin": null,
+      "accounts": [],
+      "createdAt": "2026-04-07T05:11:23.868Z",
+      "updatedAt": "2026-04-08T19:07:51.357Z",
+      "__v": 0
+    },
+    {
+      "_id": "69d491fb35fc2327c24826c2",
+      "email": "user@fraudshield.com",
+      "password": "$2a$10$RcMNgwHJJ5DbRTFRY5G.3eg1N3d054akkF7VejfqHAvnnJ.twQVGy",
+      "name": "John Smith",
+      "role": "user",
+      "accountBalance": 250000,
+      "status": "active",
+      "department": "General",
+      "lastLogin": null,
+      "accounts": [
+        {
+          "accountId": "acc-69d491fb35fc2327c24826c2",
+          "bankName": "SecureBank",
+          "accountNumber": "**** **** **** 26C2",
+          "balance": 238000,
+          "_id": "69d6aabe9f78816c5bd36790"
+        }
+      ],
+      "createdAt": "2026-04-07T05:11:23.987Z",
+      "updatedAt": "2026-04-08T19:21:34.175Z",
+      "__v": 1
+    },
+    {
+      "_id": "69d491fc35fc2327c24826c4",
+      "email": "user2@fraudshield.com",
+      "password": "$2a$10$TWyfzUn6BsyJCVI8Zs9DzO1s6IY5fcCKkpVBfuq0USpJrrxew/uYC",
+      "name": "Lisa Anderson",
+      "role": "user",
+      "accountBalance": 250000,
+      "status": "active",
+      "department": "General",
+      "lastLogin": null,
+      "accounts": [],
+      "createdAt": "2026-04-07T05:11:24.101Z",
+      "updatedAt": "2026-04-08T19:07:51.573Z",
+      "__v": 0
+    },
+    {
+      "_id": "69d491fc35fc2327c24826c6",
+      "email": "user3@fraudshield.com",
+      "password": "$2a$10$JLXTGedZ8Wpi0vrBUASTw.iiiB6KdTKn872/LeBi/rgHX8wlvKw7a",
+      "name": "David Brown",
+      "role": "user",
+      "accountBalance": 250000,
+      "status": "active",
+      "department": "General",
+      "lastLogin": null,
+      "accounts": [],
+      "createdAt": "2026-04-07T05:11:24.216Z",
+      "updatedAt": "2026-04-08T19:07:51.667Z",
+      "__v": 0
+    },
+    {
+      "_id": "69d49439746ac36ba6d72dbe",
+      "email": "sachinpatel1097819@gmail.com",
+      "password": "$2a$10$TvSaJWxcABNcR0nYRl0.9OFzq5WpA7iPL6o.ONoXP9kjF9aDuBJ6u",
+      "name": "SACHIN PATEL",
+      "role": "user",
+      "accountBalance": 250000,
+      "status": "active",
+      "department": "General",
+      "lastLogin": null,
+      "accounts": [
+        {
+          "accountId": "69d4945c746ac36ba6d72dde",
+          "bankName": "Indian",
+          "accountNumber": "**** **** **** 2544",
+          "balance": 250000,
+          "_id": "69d4945c746ac36ba6d72ddf"
+        }
+      ],
+      "createdAt": "2026-04-07T05:20:57.862Z",
+      "updatedAt": "2026-04-08T19:07:51.775Z",
+      "__v": 2
+    }
+  ],
+  "transactions": [
+    {
+      "_id": "69d6aabe9f78816c5bd36799",
+      "user": "69d491fb35fc2327c24826c2",
+      "accountId": "acc-69d491fb35fc2327c24826c2",
+      "amount": 12000,
+      "transactionType": "transfer",
+      "status": "flagged",
+      "recipient": "NEWPERSON123",
+      "disputeStatus": "none",
+      "description": "monthly rent",
+      "location": "Mumbai, IN",
+      "riskScore": 0.3,
+      "riskScorePercent": 30,
+      "riskLevel": "LOW_RISK",
+      "reasonCodes": [
+        "AMOUNT_NORMAL",
+        "LOCATION_MATCH",
+        "TIME_ODD_HOUR",
+        "FREQUENCY_NORMAL",
+        "MERCHANT_NEW",
+        "BEHAVIOR_NORMAL",
+        "TRANSFER_FLOW"
+      ],
+      "triggeredRules": [],
+      "createdAt": "2026-04-08T19:21:34.815Z",
+      "__v": 0
+    },
+    {
+      "_id": "69d6ab6e9f78816c5bd36b78",
+      "user": "69d491fb35fc2327c24826c2",
+      "accountId": "SB-USER-001",
+      "amount": 12000,
+      "transactionType": "payment",
+      "status": "flagged",
+      "recipient": "NEWPERSON123",
+      "disputeStatus": "none",
+      "description": "monthly rent",
+      "location": "Mumbai, IN",
+      "riskScore": 0.5,
+      "riskScorePercent": 50,
+      "riskLevel": "MEDIUM_RISK",
+      "reasonCodes": [
+        "AMOUNT_NORMAL",
+        "LOCATION_MATCH",
+        "TIME_ODD_HOUR",
+        "FREQUENCY_RAPID",
+        "MERCHANT_TRUSTED",
+        "BEHAVIOR_NORMAL",
+        "HISTORY_SUSPICIOUS"
+      ],
+      "triggeredRules": [],
+      "createdAt": "2026-04-08T19:24:30.209Z",
+      "__v": 0
+    }
+  ],
+  "notifications": [
+    {
+      "_id": "69d6a98a0bcdccde2a495406",
+      "user": "69d491fb35fc2327c24826be",
+      "title": "Transaction blocked",
+      "message": "Your payment to shashank mishra for Rs. 12,000 was blocked by fraud engine.",
+      "type": "error",
+      "relatedTransaction": null,
+      "read": false,
+      "createdAt": "2026-04-08T19:16:26.053Z",
+      "__v": 0
+    },
+    {
+      "_id": "69d6aa11eef6aea5a6c270ea",
+      "user": "69d491fb35fc2327c24826be",
+      "title": "Transaction blocked",
+      "message": "Your payment to NEWPERSON123 for Rs. 12,000 was blocked by fraud engine.",
+      "type": "error",
+      "relatedTransaction": null,
+      "read": false,
+      "createdAt": "2026-04-08T19:18:41.061Z",
+      "__v": 0
+    },
+    {
+      "_id": "69d6aa7ceef6aea5a6c272c3",
+      "user": "69d491fb35fc2327c24826c2",
+      "title": "Transaction flagged",
+      "message": "Your payment to NEWPERSON123 for Rs. 12,000 was flagged for analyst review.",
+      "type": "warning",
+      "relatedTransaction": null,
+      "read": false,
+      "createdAt": "2026-04-08T19:20:28.631Z",
+      "__v": 0
+    },
+    {
+      "_id": "69d6aabf9f78816c5bd3679c",
+      "user": "69d491fb35fc2327c24826c2",
+      "title": "Transaction flagged",
+      "message": "Your payment to NEWPERSON123 for Rs. 12,000 was flagged for analyst review.",
+      "type": "warning",
+      "relatedTransaction": "69d6aabe9f78816c5bd36799",
+      "read": false,
+      "createdAt": "2026-04-08T19:21:35.083Z",
+      "__v": 0
+    },
+    {
+      "_id": "69d6ab6e9f78816c5bd36b7b",
+      "user": "69d491fb35fc2327c24826c2",
+      "title": "Transaction flagged",
+      "message": "Your payment to NEWPERSON123 for Rs. 12,000 was flagged for analyst review.",
+      "type": "warning",
+      "relatedTransaction": "69d6ab6e9f78816c5bd36b78",
+      "read": false,
+      "createdAt": "2026-04-08T19:24:30.434Z",
+      "__v": 0
+    }
+  ],
+  "rules": [],
+  "models": [
+    {
+      "id": "neural-network-v1",
+      "name": "Neural Network",
+      "type": "Deep Learning Fraud Detector",
+      "status": "active",
+      "accuracy": 96.9,
+      "version": "v1.0",
+      "lastTrainedAt": "2026-04-08T19:22:10.761Z",
+      "progress": 100,
+      "coverage": 91
+    }
+  ]
+}

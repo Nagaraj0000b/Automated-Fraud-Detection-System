@@ -9,6 +9,7 @@ export default function UserManagement() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [showCreateForm, setShowCreateForm] = useState(false);
+    const [activeTab, setActiveTab] = useState('all');
     const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'user', department: 'General' });
     const [searchParams, setSearchParams] = useSearchParams();
     const [roleFilter, setRoleFilter] = useState(searchParams.get('role') || '');
@@ -175,6 +176,22 @@ export default function UserManagement() {
                 </Card>
             )}
 
+            {/* Filter Tabs */}
+            <div className="flex space-x-2 border-b border-slate-200">
+                {['all', 'admin', 'analyst', 'auditor', 'user'].map((role) => (
+                    <button
+                        key={role}
+                        onClick={() => setActiveTab(role)}
+                        className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === role
+                                ? 'border-blue-600 text-blue-600'
+                                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                            }`}
+                    >
+                        {role === 'all' ? 'All Users' : role.charAt(0).toUpperCase() + role.slice(1) + 's'}
+                    </button>
+                ))}
+            </div>
+
             {/* Users Table */}
             <Card>
                 <CardContent className="p-0">
@@ -189,7 +206,7 @@ export default function UserManagement() {
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredUsers.map((u) => (
+                            {filteredUsers.filter(u => activeTab === 'all' || u.role === activeTab).map((u) => (
                                 <tr key={u._id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
                                     <td className="px-6 py-4">
                                         <p className="font-medium text-slate-900">{u.name}</p>
@@ -213,8 +230,8 @@ export default function UserManagement() {
                                     </td>
                                 </tr>
                             ))}
-                            {filteredUsers.length === 0 && (
-                                <tr><td colSpan="5" className="px-6 py-8 text-center text-slate-400">No users found</td></tr>
+                            {filteredUsers.filter(u => activeTab === 'all' || u.role === activeTab).length === 0 && (
+                                <tr><td colSpan="5" className="px-6 py-8 text-center text-slate-400">No {activeTab === 'all' ? '' : activeTab} users found</td></tr>
                             )}
                         </tbody>
                     </table>

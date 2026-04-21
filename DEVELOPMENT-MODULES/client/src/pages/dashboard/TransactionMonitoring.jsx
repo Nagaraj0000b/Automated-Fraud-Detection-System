@@ -1,295 +1,255 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Search, Filter, ArrowUpDown, Loader2, MoreVertical, CheckCircle, XCircle, AlertTriangle, UserX } from "lucide-react";
-import { transactionAPI, userAPI } from '@/services/api';
-import { useSearchParams } from 'react-router-dom';
+import { useCallback, useEffect, useState } from 'react';
+import { Card, CardContent } from "@/components/ui/card";
+import { Search, RefreshCw, CheckCircle, XCircle, AlertTriangle, Trash2, RotateCcw } from "lucide-react";
+import { transactionAPI } from '../../services/api';
 
 export default function TransactionMonitoring() {
-    const [transactions, setTransactions] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [searchParams, setSearchParams] = useSearchParams();
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [search, setSearch] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [actionLoadingId, setActionLoadingId] = useState('');
+
+  const loadTransactions = useCallback(async (isSilent = false) => {
+    if (isSilent) setRefreshing(true);
+    else setLoading(true);
     
-    // Pagination & Filtering
-    const [page, setPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(1);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || '');
-    const [updatingTxnId, setUpdatingTxnId] = useState(null);
+    try {
+      const res = await transactionAPI.getAllTransactions({ limit: 50 });
+      if (res.success) setTransactions(res.transactions);
+    } catch (err) {
+      console.error('Failed to load transactions', err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
 
-    // Dropdown state for simple row-level actions
-    const [openDropdown, setOpenDropdown] = useState(null);
+  useEffect(() => { loadTransactions(); }, [loadTransactions]);
 
-    // Update URL when status filter changes
-    const handleStatusChange = (newStatus) => {
-        setStatusFilter(newStatus);
-        setPage(1);
-        if (newStatus) {
-            setSearchParams({ status: newStatus });
-        } else {
-            setSearchParams({});
-        }
+  const handleUpdateStatus = async (txId, status) => {
+    setActionLoadingId(txId);
+    try {
+      const res = await transactionAPI.updateStatus(txId, status);
+      if (res.success) {
+        setTransactions(prev =>
+          prev.map(tx => tx._id === txId ? { ...tx, status } : tx)
+        );
+      }
+    } catch (err) {
+      alert('Action failed: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setActionLoadingId('');
+    }
+  };
+
+  const handleDelete = async (txId) => {
+    if (!window.confirm('Delete this transaction?')) return;
+    setActionLoadingId(txId);
+    try {
+      const res = await transactionAPI.delete(txId);
+      if (res.success) {
+        setTransactions(prev => prev.filter(tx => tx._id !== txId));
+      }
+    } catch (err) {
+      alert('Delete failed');
+    } finally {
+      setActionLoadingId('');
+    }
+  };
+
+  const handleRecover = async (txId) => {
+    setActionLoadingId(txId);
+    try {
+      const res = await transactionAPI.recover(txId);
+      if (res.success) {
+        setTransactions(prev =>
+          prev.map(tx => tx._id === txId ? { ...tx, status: 'approved' } : tx)
+        );
+      }
+    } catch (err) {
+      alert('Recovery failed');
+    } finally {
+      setActionLoadingId('');
+    }
+  };
+
+  const handleDeleteAll = async () => {
+    if (!window.confirm('Delete ALL transactions?')) return;
+    setRefreshing(true);
+    try {
+      const res = await transactionAPI.deleteAll();
+      if (res.success) setTransactions([]);
+    } catch (err) {
+      alert('Clear failed');
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const handleRecoverAll = async () => {
+    if (!window.confirm('Recover/Approve ALL transactions?')) return;
+    setRefreshing(true);
+    try {
+      const res = await transactionAPI.recoverAll();
+      if (res.success) loadTransactions(true);
+    } catch (err) {
+      alert('Recover all failed');
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const filtered = transactions.filter(tx => {
+    const q = search.toLowerCase();
+    const matchSearch =
+      (tx._id || '').toLowerCase().includes(q) ||
+      (tx.recipient || '').toLowerCase().includes(q) ||
+      (tx.user?.name || '').toLowerCase().includes(q) ||
+      String(tx.amount).includes(q);
+    const matchStatus = filterStatus === 'all' || tx.status === filterStatus;
+    return matchSearch && matchStatus;
+  });
+
+  const getStatusBadge = (status) => {
+    const styles = {
+      approved: 'bg-emerald-100 text-emerald-700',
+      pending:  'bg-blue-100 text-blue-700',
+      flagged:  'bg-amber-100 text-amber-700',
+      blocked:  'bg-red-100 text-red-700',
     };
+    return styles[status] || 'bg-slate-100 text-slate-600';
+  };
 
-    const fetchTransactions = async () => {
-        try {
-            setLoading(true);
-            const response = await transactionAPI.getAllTransactions({
-                page,
-                limit: 15,
-                search: searchTerm,
-                status: statusFilter
-            });
-            
-            if (response.success) {
-                setTransactions(response.transactions);
-                setTotalPages(response.pages);
-                setError(null);
-            }
-        } catch (err) {
-            setError('Failed to load transactions');
-            console.error(err);
-        } finally {
-            setLoading(false);
-        }
-    };
+  const getRiskStyle = (score = 0) => {
+    if (score >= 80) return { badge: 'bg-red-100 text-red-700', label: 'Critical', color: 'bg-red-500' };
+    if (score >= 50) return { badge: 'bg-orange-100 text-orange-700', label: 'High', color: 'bg-orange-500' };
+    if (score >= 20) return { badge: 'bg-amber-100 text-amber-700', label: 'Medium', color: 'bg-amber-500' };
+    return { badge: 'bg-emerald-100 text-emerald-700', label: 'Low', color: 'bg-emerald-500' };
+  };
 
-    useEffect(() => {
-        // Debounce search slightly
-        const delayDebounceFn = setTimeout(() => {
-            fetchTransactions();
-        }, 500);
-
-        return () => clearTimeout(delayDebounceFn);
-    }, [page, searchTerm, statusFilter]);
-
-    // Read status from URL if it changes externally
-    useEffect(() => {
-        const statusFromUrl = searchParams.get('status');
-        if (statusFromUrl !== statusFilter) {
-            setStatusFilter(statusFromUrl || '');
-        }
-    }, [searchParams]);
-
-    const handleUpdateStatus = async (transactionId, newStatus) => {
-        try {
-            setUpdatingTxnId(transactionId);
-            const res = await transactionAPI.updateStatus(transactionId, newStatus);
-            if (res.success) {
-                // Update local state
-                setTransactions(transactions.map(txn => 
-                    txn._id === transactionId ? { ...txn, status: newStatus } : txn
-                ));
-            }
-            setOpenDropdown(null);
-        } catch (err) {
-            alert('Failed to update status');
-            console.error(err);
-        } finally {
-            setUpdatingTxnId(null);
-        }
-    };
-
-    const handleSuspendAccount = async (userId, transactionId) => {
-        if (!window.confirm("Are you sure you want to suspend this user's account?")) return;
-        
-        try {
-            setUpdatingTxnId(transactionId); // Just using this for the loading spinner on the row
-            const res = await userAPI.update(userId, { status: 'suspended' });
-            if (res.success) {
-                alert(`User account suspended successfully.`);
-            }
-            setOpenDropdown(null);
-        } catch (err) {
-            alert('Failed to suspend account');
-            console.error(err);
-        } finally {
-            setUpdatingTxnId(null);
-        }
-    };
-
-    const getStatusStyle = (status) => {
-        switch (status) {
-            case 'approved': return 'bg-emerald-100 text-emerald-700 border border-emerald-200';
-            case 'flagged': return 'bg-amber-100 text-amber-700 border border-amber-200';
-            case 'blocked': return 'bg-red-100 text-red-700 border border-red-200';
-            case 'pending': default: return 'bg-slate-100 text-slate-700 border border-slate-200';
-        }
-    };
-
-    const getRiskStyle = (score) => {
-        if (score >= 0.8) return 'bg-red-100 text-red-700';
-        if (score >= 0.5) return 'bg-orange-100 text-orange-700';
-        return 'bg-slate-100 text-slate-700';
-    };
-
-    return (
-        <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                    <h2 className="text-2xl font-bold tracking-tight text-slate-900">Transaction Monitoring</h2>
-                    <p className="text-slate-500">Real-time view of all system transactions.</p>
-                </div>
-                <div className="flex items-center space-x-2">
-                    <select 
-                        className="px-3 py-2 bg-white border border-slate-200 rounded-md text-sm font-medium text-slate-600 outline-none"
-                        value={statusFilter}
-                        onChange={(e) => handleStatusChange(e.target.value)}
-                    >
-                        <option value="">All Statuses</option>
-                        <option value="pending">Pending</option>
-                        <option value="approved">Approved</option>
-                        <option value="flagged">Flagged</option>
-                        <option value="blocked">Blocked</option>
-                    </select>
-                    <button onClick={() => { setSearchTerm(''); handleStatusChange(''); }} className="px-3 py-2 bg-white border border-slate-200 rounded-md text-sm font-medium text-slate-600 hover:bg-slate-50">
-                        Clear Filters
-                    </button>
-                </div>
-            </div>
-
-            <Card>
-                <CardHeader className="pb-3 border-b border-slate-100 flex flex-row items-center justify-between">
-                    <div className="flex items-center px-3 py-2 bg-slate-50 border border-slate-200 rounded-md w-full max-w-sm">
-                        <Search className="w-4 h-4 text-slate-400 mr-2" />
-                        <input 
-                            type="text" 
-                            placeholder="Search recipient or description..." 
-                            className="bg-transparent border-none outline-none text-sm w-full"
-                            value={searchTerm}
-                            onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
-                        />
-                    </div>
-                </CardHeader>
-                <CardContent className="p-0">
-                    <div className="overflow-x-auto min-h-[400px]">
-                        <table className="w-full text-sm text-left">
-                            <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-100">
-                                <tr>
-                                    <th className="px-6 py-3 font-medium">Txn ID / Date</th>
-                                    <th className="px-6 py-3 font-medium">User</th>
-                                    <th className="px-6 py-3 font-medium">Recipient</th>
-                                    <th className="px-6 py-3 font-medium">Amount</th>
-                                    <th className="px-6 py-3 font-medium">Status</th>
-                                    <th className="px-6 py-3 font-medium">Risk Score</th>
-                                    <th className="px-6 py-3 font-medium">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-50">
-                                {loading && transactions.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="7" className="px-6 py-12 text-center">
-                                            <Loader2 className="w-8 h-8 animate-spin text-blue-500 mx-auto" />
-                                            <p className="mt-2 text-slate-500">Loading transactions...</p>
-                                        </td>
-                                    </tr>
-                                ) : transactions.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="7" className="px-6 py-12 text-center text-slate-500">
-                                            No transactions found matching your criteria.
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    transactions.map((txn) => (
-                                        <tr key={txn._id} className="hover:bg-slate-50/50 transition-colors">
-                                            <td className="px-6 py-4">
-                                                <div className="font-mono text-xs text-slate-500">{txn._id.slice(-8)}</div>
-                                                <div className="text-xs text-slate-400 mt-0.5">{new Date(txn.createdAt).toLocaleString()}</div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="font-medium text-slate-900">{txn.user?.name || 'Unknown User'}</div>
-                                                <div className="text-xs text-slate-500">{txn.user?.email || 'N/A'}</div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="text-slate-700">{txn.recipient}</div>
-                                                {txn.description && <div className="text-xs text-slate-500 truncate max-w-[150px]">{txn.description}</div>}
-                                            </td>
-                                            <td className="px-6 py-4 font-medium text-slate-900">
-                                                ₹{txn.amount?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <span className={`px-2.5 py-1 rounded-full text-xs font-medium capitalize ${getStatusStyle(txn.status)}`}>
-                                                    {txn.status}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getRiskStyle(txn.riskScore)}`}>
-                                                    {(txn.riskScore * 100).toFixed(1)}%
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 relative">
-                                                <button 
-                                                    onClick={() => setOpenDropdown(openDropdown === txn._id ? null : txn._id)}
-                                                    disabled={updatingTxnId === txn._id}
-                                                    className="p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 rounded-md"
-                                                >
-                                                    {updatingTxnId === txn._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <MoreVertical className="w-4 h-4" />}
-                                                </button>
-
-                                                {/* Simple Action Dropdown */}
-                                                {openDropdown === txn._id && (
-                                                    <div className="absolute right-8 top-10 w-48 bg-white border border-slate-200 rounded-md shadow-lg z-10 py-1">
-                                                        <button 
-                                                            onClick={() => handleUpdateStatus(txn._id, 'approved')}
-                                                            className="w-full text-left px-4 py-2 text-sm text-emerald-600 hover:bg-slate-50 flex items-center"
-                                                        >
-                                                            <CheckCircle className="w-4 h-4 mr-2" /> Approve Txn
-                                                        </button>
-                                                        <button 
-                                                            onClick={() => handleUpdateStatus(txn._id, 'flagged')}
-                                                            className="w-full text-left px-4 py-2 text-sm text-amber-600 hover:bg-slate-50 flex items-center"
-                                                        >
-                                                            <AlertTriangle className="w-4 h-4 mr-2" /> Flag Txn
-                                                        </button>
-                                                        <button 
-                                                            onClick={() => handleUpdateStatus(txn._id, 'blocked')}
-                                                            className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-slate-50 flex items-center"
-                                                        >
-                                                            <XCircle className="w-4 h-4 mr-2" /> Block Txn
-                                                        </button>
-                                                        <div className="h-px bg-slate-100 my-1 mx-2"></div>
-                                                        <button 
-                                                            onClick={() => handleSuspendAccount(txn.user?._id, txn._id)}
-                                                            className="w-full text-left px-4 py-2 text-sm text-red-700 font-medium hover:bg-red-50 flex items-center"
-                                                        >
-                                                            <UserX className="w-4 h-4 mr-2" /> Suspend Account
-                                                        </button>
-                                                    </div>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </CardContent>
-            </Card>
-            
-            {/* Pagination Controls */}
-            {totalPages > 1 && (
-                <div className="flex items-center justify-between px-2">
-                    <p className="text-sm text-slate-500">
-                        Page {page} of {totalPages}
-                    </p>
-                    <div className="flex gap-2">
-                        <button
-                            disabled={page === 1 || loading}
-                            onClick={() => setPage(p => p - 1)}
-                            className="px-3 py-1 bg-white border border-slate-200 rounded text-sm disabled:opacity-50 hover:bg-slate-50"
-                        >
-                            Previous
-                        </button>
-                        <button
-                            disabled={page === totalPages || loading}
-                            onClick={() => setPage(p => p + 1)}
-                            className="px-3 py-1 bg-white border border-slate-200 rounded text-sm disabled:opacity-50 hover:bg-slate-50"
-                        >
-                            Next
-                        </button>
-                    </div>
-                </div>
-            )}
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight text-slate-900">Transaction Monitoring</h2>
+          <p className="text-slate-500 text-sm mt-1">Real-time fraud detection and manual review system</p>
         </div>
-    );
+        <div className="flex gap-2">
+            <button
+                onClick={handleRecoverAll}
+                className="flex items-center gap-2 px-3 py-2 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-md text-sm font-medium hover:bg-indigo-100 transition-colors"
+            >
+                <RotateCcw className="w-4 h-4" /> Recover All
+            </button>
+            <button
+                onClick={handleDeleteAll}
+                className="flex items-center gap-2 px-3 py-2 bg-red-50 text-red-600 border border-red-100 rounded-md text-sm font-medium hover:bg-red-100 transition-colors"
+            >
+                <Trash2 className="w-4 h-4" /> Delete All
+            </button>
+            <button
+                onClick={() => loadTransactions()}
+                className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-md text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+            >
+                <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} /> Refresh
+            </button>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2 items-center">
+        <div className="flex items-center px-3 py-2 bg-white border border-slate-200 rounded-md flex-1 min-w-[200px] max-w-sm">
+          <Search className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search transactions..."
+            className="bg-transparent border-none outline-none text-sm w-full"
+          />
+        </div>
+
+        <div className="flex gap-1 flex-wrap">
+          {['all', 'pending', 'approved', 'flagged', 'blocked'].map(s => (
+            <button
+              key={s}
+              onClick={() => setFilterStatus(s)}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium capitalize transition-colors ${
+                filterStatus === s ? 'bg-slate-800 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <Card>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="p-12 text-center text-slate-400 text-sm animate-pulse">Loading...</div>
+          ) : filtered.length === 0 ? (
+            <div className="p-12 text-center text-slate-400 text-sm italic">No records found.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-100">
+                  <tr>
+                    <th className="px-5 py-3">ID</th>
+                    <th className="px-5 py-3">User</th>
+                    <th className="px-5 py-3">Recipient</th>
+                    <th className="px-5 py-3">Amount</th>
+                    <th className="px-5 py-3">Status</th>
+                    <th className="px-5 py-3">Risk</th>
+                    <th className="px-5 py-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((tx) => {
+                    const risk = getRiskStyle(tx.riskScorePercent);
+                    const isBusy = actionLoadingId === tx._id;
+                    return (
+                      <tr key={tx._id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                        <td className="px-5 py-4 font-mono text-xs text-indigo-600 font-bold">TXN-{tx._id?.slice(-6).toUpperCase()}</td>
+                        <td className="px-5 py-4">
+                          <div className="font-medium">{tx.user?.name || 'User'}</div>
+                          <div className="text-xs text-slate-400">{tx.user?.email}</div>
+                        </td>
+                        <td className="px-5 py-4">{tx.recipient}</td>
+                        <td className="px-5 py-4 font-bold">₹{tx.amount?.toLocaleString()}</td>
+                        <td className="px-5 py-4">
+                          <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase ${getStatusBadge(tx.status)}`}>
+                            {tx.status}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-2">
+                             <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${risk.badge}`}>{tx.riskScorePercent}%</span>
+                             <div className="w-12 h-1 bg-slate-100 rounded-full overflow-hidden">
+                                <div className={`h-full ${risk.color}`} style={{ width: `${tx.riskScorePercent}%` }} />
+                             </div>
+                          </div>
+                        </td>
+                        <td className="px-5 py-4 text-right">
+                           <div className="flex justify-end gap-1">
+                              <button disabled={isBusy} onClick={() => handleUpdateStatus(tx._id, 'approved')} className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded" title="Approve"><CheckCircle className="w-4 h-4" /></button>
+                              <button disabled={isBusy} onClick={() => handleUpdateStatus(tx._id, 'flagged')} className="p-1.5 text-amber-600 hover:bg-amber-50 rounded" title="Flag"><AlertTriangle className="w-4 h-4" /></button>
+                              <button disabled={isBusy} onClick={() => handleUpdateStatus(tx._id, 'blocked')} className="p-1.5 text-red-600 hover:bg-red-50 rounded" title="Block"><XCircle className="w-4 h-4" /></button>
+                              <button disabled={isBusy} onClick={() => handleRecover(tx._id)} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded" title="Recover"><RotateCcw className="w-4 h-4" /></button>
+                              <button disabled={isBusy} onClick={() => handleDelete(tx._id)} className="p-1.5 text-slate-300 hover:text-red-500 rounded" title="Delete"><Trash2 className="w-4 h-4" /></button>
+                           </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      <p className="text-[10px] text-slate-400 text-right uppercase tracking-widest">{filtered.length} total records matched</p>
+    </div>
+  );
 }
