@@ -11,7 +11,7 @@ router.use(authMiddleware.checkMaintenanceMode);
 
 // Admin / Analyst Routes
 const authorizeAdmin = (req, res, next) => {
-  if (['admin', 'analyst', 'auditor'].includes(req.user.role)) {
+  if (['admin', 'analyst'].includes(req.user.role)) {
     next();
   } else {
     res.status(403).json({ success: false, message: 'Not authorized' });

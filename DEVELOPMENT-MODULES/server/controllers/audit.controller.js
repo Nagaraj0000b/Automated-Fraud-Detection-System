@@ -3,7 +3,7 @@ const AuditLog = require('../models/AuditLog');
 /**
  * @desc    Get all audit/compliance logs
  * @route   GET /api/audit/logs
- * @access  Private (Admin/Auditor only)
+ * @access  Private (Admin only)
  */
 exports.getAuditLogs = async (req, res) => {
   try {

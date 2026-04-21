@@ -109,7 +109,6 @@ export default function UserManagement() {
                             <option value="">All Roles</option>
                             <option value="admin">Admin</option>
                             <option value="analyst">Analyst</option>
-                            <option value="auditor">Auditor</option>
                             <option value="user">User</option>
                         </select>
                         {roleFilter && (
@@ -162,7 +161,6 @@ export default function UserManagement() {
                                 <option value="user">User</option>
                                 <option value="admin">Admin</option>
                                 <option value="analyst">Analyst</option>
-                                <option value="auditor">Auditor</option>
                             </select>
                             <input
                                 type="text" placeholder="Department" value={newUser.department}
