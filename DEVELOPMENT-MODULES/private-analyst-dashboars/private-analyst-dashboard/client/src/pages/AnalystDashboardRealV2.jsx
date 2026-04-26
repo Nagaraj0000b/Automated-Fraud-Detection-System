@@ -309,9 +309,9 @@ export default function AnalystDashboardRealV2() {
       const riskLevel = humanizeRiskLevel(transaction.riskLevel || getRiskLevelFromScore(riskScore));
       const displayTransactionId = getDisplayTransactionId(transaction._id).toLowerCase();
 
-      // Force only flagged or blocked transactions for the Fraud Detection view
+      // Admins only see flagged/blocked transactions. Analysts see everything.
       const isFraudCase = ['flagged', 'blocked'].includes(transaction.status);
-      if (!isFraudCase) return false;
+      if (user.role === 'admin' && !isFraudCase) return false;
 
       const matchesSearch =
         !q ||
