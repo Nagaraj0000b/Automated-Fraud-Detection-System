@@ -68,9 +68,10 @@ const MakePayment = () => {
       const payload = {
         accountId: selectedAccountId,
         amount: Number(amount),
+        transactionType: 'transfer',
         recipient,
         description,
-        location: location || undefined
+        location: location ? `${location.lat.toFixed(2)}, ${location.long.toFixed(2)}` : undefined
       };
       
       await transactionAPI.createTransaction(payload);
