@@ -78,8 +78,8 @@ describe('Transaction API (Black Box Testing)', () => {
       .set('Authorization', `Bearer ${authToken}`)
       .send({ amount: 5000 }); // Missing recipient, transactionType, etc.
 
-    // Mongoose validation catches it; controller handles error
-    expect(res.statusCode).toBe(500);
-    expect(res.body.message).toBe('Transaction failed');
+    // Our input validation now returns 400 Bad Request with a clear message
+    expect(res.statusCode).toBe(400);
+    expect(res.body.message).toBe('Invalid transaction type');
   });
 });

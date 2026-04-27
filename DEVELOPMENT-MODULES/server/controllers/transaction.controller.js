@@ -112,12 +112,27 @@ exports.updateTransactionStatus = async (req, res) => {
 exports.createTransaction = async (req, res) => {
   try {
     const { amount, transactionType, recipient, description, accountId, location } = req.body;
-    
+
+    // ---------- Input Validation (400 Bad Request) ----------
+    // Amount must be a positive number
+    if (typeof amount !== 'number' || amount <= 0) {
+      return res.status(400).json({ success: false, message: 'Invalid transaction amount' });
+    }
+    // transactionType must be one of the allowed enum values
+    const allowedTypes = ['deposit', 'withdrawal', 'transfer', 'payment'];
+    if (!allowedTypes.includes(transactionType)) {
+      return res.status(400).json({ success: false, message: 'Invalid transaction type' });
+    }
+    // recipient is required
+    if (!recipient) {
+      return res.status(400).json({ success: false, message: 'Recipient is required' });
+    }
+
     // --- 🚨 BASIC FRAUD RULES (Temporary Logic) ---
     // If Amount > 50,000 OR Multiple small payments quickly (future logic)
     let riskScore = 0;
     let status = 'approved';
-
+    
     if (amount > 100000) {
       status = 'blocked'; // Too risky! Auto-block
       riskScore = 0.99;
@@ -125,7 +140,7 @@ exports.createTransaction = async (req, res) => {
       status = 'flagged'; // Needs Analyst Review
       riskScore = 0.85;
     }
-
+    
     const newTransaction = new Transaction({
       user: req.user.userId,
       accountId: accountId || undefined,
@@ -153,9 +168,13 @@ exports.createTransaction = async (req, res) => {
         await User.findByIdAndUpdate(req.user.userId, { $inc: { accountBalance: -amount } });
       }
     }
-
+    
     res.status(201).json(newTransaction);
   } catch (error) {
+    // If a Mongoose validation error slips through, return 400
+    if (error && error.name === 'ValidationError') {
+      return res.status(400).json({ success: false, message: error.message });
+    }
     res.status(500).json({ message: 'Transaction failed', error: error.message });
   }
 };
