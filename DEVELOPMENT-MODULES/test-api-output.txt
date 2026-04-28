@@ -1,0 +1,26 @@
+
+> fraud-detection-auth-server@1.0.0 test
+> jest transaction.api.test --verbose
+
+  console.log
+    ✅ Connected to MongoDB
+
+      at log (config/database.js:11:13)
+
+  console.log
+    🗄️  Database: Local MongoDB
+
+      at log (config/database.js:12:13)
+
+PASS tests/transaction.api.test.js
+  Transaction API (Black Box Testing)
+    √ should fail to create transaction if unauthenticated (401 Unauthorized) (6 ms)
+    √ should successfully create a normal transaction (201 Created) (13 ms)
+    √ should auto-flag a large transaction (201 Created) (10 ms)
+    √ should fallback securely when missing required transaction data (500/400) (6 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       4 passed, 4 total
+Snapshots:   0 total
+Time:        1.534 s, estimated 2 s
+Ran all test suites matching transaction.api.test.

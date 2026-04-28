@@ -47,4 +47,3 @@ The testing scope focused on the transaction module, especially `POST /api/trans
 | TC-TX-06 | Negative amount transaction | Valid token, amount `-500`, type `transfer`, valid recipient | `400 Bad Request`, no balance credit | Not executed | Not executed |
 | TC-TX-07 | Missing recipient field | Valid token, amount `2000`, missing recipient | `400 Bad Request` | Not executed | Not executed |
 | TC-TX-08 | Unsupported transaction type | Valid token, amount `2000`, type `billpay` | `400 Bad Request` | Not executed | Not executed |
-
