@@ -39,6 +39,7 @@ const CustomerDashboard = () => {
   const [showAddAccountModal, setShowAddAccountModal] = useState(false);
   const [newAccountBankName, setNewAccountBankName] = useState("");
   const [showBankList, setShowBankList] = useState(false);
+  const [transactionsLoading, setTransactionsLoading] = useState(false);
 
   // Add Money Modal State
   const [showAddMoneyModal, setShowAddMoneyModal] = useState(false);
@@ -113,16 +114,23 @@ const CustomerDashboard = () => {
 
   const fetchHistory = async (accountId) => {
     try {
+      console.log('Fetching history for account:', accountId);
+      setTransactionsLoading(true);
       const data = await transactionAPI.getMyTransactions(accountId);
-      if (Array.isArray(data)) {
-        setTransactions(data);
-      } else {
-        setTransactions([]);
-        console.warn("Transactions data is not an array:", data);
-      }
+      setTransactions(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Failed to load transactions", error);
       setTransactions([]);
+    } finally {
+      setTransactionsLoading(false);
+    }
+  };
+
+  const handleRefresh = () => {
+    if (selectedAccountId) {
+      fetchHistory(selectedAccountId);
+    } else {
+      initializeAccountsFromBackend();
     }
   };
 
@@ -346,7 +354,54 @@ const CustomerDashboard = () => {
                   <Download className="w-4 h-4 text-slate-400" />
                   Export
                 </button>
+<<<<<<< HEAD
               )}
+=======
+                <button
+                  onClick={openAddAccountModal}
+                  className="group text-sm font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-full px-6 py-2.5 transition-all flex items-center gap-2 shadow-sm hover:shadow-md transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50"
+                >
+                  <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 group-hover:scale-110 transition-transform">＋</span>
+                  <span>Add Account</span>
+                </button>
+                <button
+                  onClick={handleRefresh}
+                  className="text-xs font-medium text-blue-300 hover:text-blue-200 underline mr-2"
+                >
+                  Refresh
+                </button>
+                {activeTab === 'transactions' && (
+                  <button
+                    onClick={downloadCSV}
+                    className="flex items-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-sm"
+                  >
+                    <Download className="w-4 h-4 text-slate-400" />
+                    Export
+                  </button>
+                )}
+                <button
+                  onClick={openAddAccountModal}
+                  className="group text-sm font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-full px-6 py-2.5 transition-all flex items-center gap-2 shadow-sm hover:shadow-md transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50"
+                >
+                  <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 group-hover:scale-110 transition-transform">＋</span>
+                  <span>Add Account</span>
+                </button>
+                <button
+                  onClick={handleRefresh}
+                  className="text-xs font-medium text-blue-300 hover:text-blue-200 underline mr-2"
+                >
+                  Refresh
+                </button>
+                {activeTab === 'transactions' && (
+                  <button
+                    onClick={downloadCSV}
+                    className="text-xs font-medium text-cyan-700 hover:text-cyan-800 uppercase tracking-wider py-2 px-4 rounded-lg bg-cyan-50 hover:bg-cyan-100 transition-all border border-cyan-200 shadow-sm hover:shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50"
+                  >
+                    Download Report
+                  </button>
+                )}
+              </div>
+
             </div>
           </div>
 

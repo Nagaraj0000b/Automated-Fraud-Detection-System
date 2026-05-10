@@ -1,0 +1,8 @@
+{
+  "accuracy": 100,
+  "coverage": 94,
+  "lastTrained": "2026-04-26T05:41:33.101Z",
+  "totalSamples": 809,
+  "fraudRate": 16.2,
+  "status": "active"
+}
