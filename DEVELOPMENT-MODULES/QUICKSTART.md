@@ -47,9 +47,8 @@ From `DEVELOPMENT-MODULES/`:
 npm run seed
 ```
 
-Creates:
-- `admin@fraud-detection.com` / `admin123`
-- `user@fraud-detection.com` / `password123`
+Creates the admin, analyst, and user accounts listed in
+[`TEST-CREDENTIALS.md`](./TEST-CREDENTIALS.md).
 
 ## 5. Run App
 
@@ -68,7 +67,7 @@ App URLs:
 
 1. Open `http://localhost:3000`
 2. Create an account from `/signup` or sign in at `/signin`
-3. Confirm redirect to `/dashboard`
+3. Regular users land on `/customer-dashboard`; admins land on `/admin-dashboard`
 
 ## OAuth (Optional)
 
