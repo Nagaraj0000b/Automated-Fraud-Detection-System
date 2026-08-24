@@ -2,9 +2,11 @@ const httpMocks = require('node-mocks-http');
 const { createTransaction, updateTransactionStatus, raiseDispute } = require('../controllers/transaction.controller');
 const Transaction = require('../models/Transaction');
 const User = require('../models/User');
+const RiskRule = require('../models/RiskRule');
 const { createAuditLog } = require('../controllers/audit.controller');
 
 jest.mock('../models/User');
+jest.mock('../models/RiskRule');
 jest.mock('../controllers/audit.controller', () => ({
   createAuditLog: jest.fn().mockResolvedValue(true)
 }));
@@ -24,6 +26,8 @@ describe('Transaction Controller (White Box Testing)', () => {
     });
     res = httpMocks.createResponse();
     jest.clearAllMocks();
+    // No custom risk rules configured -> fraudEngine falls back to baseline thresholds
+    RiskRule.find = jest.fn().mockResolvedValue([]);
   });
 
   it('should approve transactions under 50,000 with 0 risk score', async () => {

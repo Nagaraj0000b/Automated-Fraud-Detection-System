@@ -46,6 +46,17 @@ const transactionSchema = new mongoose.Schema({
     type: Number, // 0 to 1 (Fraud Likelihood)
     default: 0
   },
+  triggeredRules: {
+    type: [
+      {
+        ruleId: { type: mongoose.Schema.Types.ObjectId, ref: 'RiskRule' },
+        name: String,
+        severity: String,
+        action: String,
+      },
+    ],
+    default: [],
+  },
   createdAt: {
     type: Date,
     default: Date.now

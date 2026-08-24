@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { transactionAPI, accountAPI } from '../services/api';
-import { ArrowLeft, Send, MapPin, Building2, CreditCard, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Send, MapPin, Building2, CreditCard, AlertCircle, ShieldAlert, ShieldCheck, ShieldQuestion } from 'lucide-react';
 
 const MakePayment = () => {
   const navigate = useNavigate();
@@ -12,6 +12,7 @@ const MakePayment = () => {
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [result, setResult] = useState(null); // { status, riskScore, triggeredRules }
   
   // Location state
   const [location, setLocation] = useState(null);
@@ -63,6 +64,7 @@ const MakePayment = () => {
     
     setLoading(true);
     setError('');
+    setResult(null);
 
     try {
       const payload = {
@@ -73,9 +75,16 @@ const MakePayment = () => {
         description,
         location: location ? `${location.lat.toFixed(2)}, ${location.long.toFixed(2)}` : undefined
       };
-      
-      await transactionAPI.createTransaction(payload);
-      navigate('/customer-dashboard');
+
+      const transaction = await transactionAPI.createTransaction(payload);
+      setResult(transaction);
+
+      if (transaction.status === 'approved') {
+        setTimeout(() => navigate('/customer-dashboard'), 900);
+      } else if (transaction.status === 'flagged') {
+        setTimeout(() => navigate('/customer-dashboard'), 2500);
+      }
+      // Blocked transactions stay on this page so the user can see why.
     } catch (err) {
       console.error(err);
       setError(err.response?.data?.message || 'Transaction failed. Please try again.');
@@ -106,6 +115,39 @@ const MakePayment = () => {
           <div className="mb-6 p-4 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-3 text-rose-700">
             <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
             <p className="text-sm font-bold">{error}</p>
+          </div>
+        )}
+
+        {result && result.status === 'blocked' && (
+          <div className="mb-6 p-4 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-3 text-rose-700">
+            <ShieldAlert className="w-5 h-5 flex-shrink-0 mt-0.5" />
+            <div className="text-sm">
+              <p className="font-bold">Transaction blocked by FraudGuard AI</p>
+              {result.triggeredRules && result.triggeredRules.length > 0 ? (
+                <ul className="mt-1 list-disc list-inside font-medium">
+                  {result.triggeredRules.map((r, i) => <li key={i}>{r.name} ({r.severity})</li>)}
+                </ul>
+              ) : (
+                <p className="mt-1 font-medium">This transaction exceeded our automated risk threshold.</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {result && result.status === 'flagged' && (
+          <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3 text-amber-700">
+            <ShieldQuestion className="w-5 h-5 flex-shrink-0 mt-0.5" />
+            <div className="text-sm">
+              <p className="font-bold">Transaction flagged for manual review</p>
+              <p className="mt-1 font-medium">Redirecting to your dashboard...</p>
+            </div>
+          </div>
+        )}
+
+        {result && result.status === 'approved' && (
+          <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-start gap-3 text-emerald-700">
+            <ShieldCheck className="w-5 h-5 flex-shrink-0 mt-0.5" />
+            <p className="text-sm font-bold">Transaction approved. Redirecting...</p>
           </div>
         )}
 

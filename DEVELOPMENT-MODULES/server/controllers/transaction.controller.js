@@ -1,6 +1,7 @@
 const Transaction = require('../models/Transaction');
 const User = require('../models/User');
 const { createAuditLog } = require('./audit.controller');
+const { evaluateTransaction } = require('../services/fraudEngine');
 
 // Get all transactions for the current user (optionally filtered by account)
 exports.getUserTransactions = async (req, res) => {
@@ -128,19 +129,15 @@ exports.createTransaction = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Recipient is required' });
     }
 
-    // --- 🚨 BASIC FRAUD RULES (Temporary Logic) ---
-    // If Amount > 50,000 OR Multiple small payments quickly (future logic)
-    let riskScore = 0;
-    let status = 'approved';
-    
-    if (amount > 100000) {
-      status = 'blocked'; // Too risky! Auto-block
-      riskScore = 0.99;
-    } else if (amount > 50000) {
-      status = 'flagged'; // Needs Analyst Review
-      riskScore = 0.85;
-    }
-    
+    // --- Automated Fraud Detection: evaluate against configured risk rules ---
+    const { status, riskScore, triggeredRules } = await evaluateTransaction({
+      amount,
+      transactionType,
+      recipient,
+      location,
+      description,
+    });
+
     const newTransaction = new Transaction({
       user: req.user.userId,
       accountId: accountId || undefined,
@@ -150,7 +147,8 @@ exports.createTransaction = async (req, res) => {
       description,
       location,
       status, // 'approved', 'flagged', or 'blocked'
-      riskScore
+      riskScore,
+      triggeredRules,
     });
     
     await newTransaction.save();

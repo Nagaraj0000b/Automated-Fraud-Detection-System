@@ -218,4 +218,28 @@ export const settingAPI = {
   },
 };
 
+// Risk Rules API calls (Admin only) - Automated Fraud Detection engine
+export const riskRuleAPI = {
+  getRules: async () => {
+    const response = await api.get('/rules');
+    return response.data;
+  },
+  createRule: async (data) => {
+    const response = await api.post('/rules', data);
+    return response.data;
+  },
+  updateRule: async (id, data) => {
+    const response = await api.put(`/rules/${id}`, data);
+    return response.data;
+  },
+  toggleRule: async (id, enabled) => {
+    const response = await api.put(`/rules/${id}`, { enabled });
+    return response.data;
+  },
+  deleteRule: async (id) => {
+    const response = await api.delete(`/rules/${id}`);
+    return response.data;
+  },
+};
+
 export default api;

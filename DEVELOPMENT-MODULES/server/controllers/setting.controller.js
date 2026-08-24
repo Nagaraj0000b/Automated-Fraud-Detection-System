@@ -52,14 +52,13 @@ exports.updateSettings = async (req, res) => {
 
     // Create Audit Log
     await createAuditLog({
-      user: req.user._id,
       action: 'System Settings Updated',
-      entity: 'System',
-      entityId: settings._id,
-      details: 'Admin updated global system configurations',
+      actor: req.user?.userId || req.user?._id || 'system',
+      actorName: req.user?.name || 'Admin',
+      target: `Setting: ${settings._id}`,
       ipAddress: req.ip,
-      userAgent: req.get('user-agent'),
-      result: 'success',
+      details: { emailNotifications, smsAlerts, maintenanceMode },
+      result: 'Success',
     });
 
     res.status(200).json({
